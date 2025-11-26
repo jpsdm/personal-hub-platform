@@ -1,0 +1,13 @@
+# Dockerfile for running Prisma migrations and seed
+FROM node:20-alpine
+RUN corepack enable && corepack prepare pnpm@latest --activate
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml tsconfig.json prisma.config.ts ./
+RUN pnpm install --frozen-lockfile
+
+COPY prisma ./prisma
+COPY lib ./lib
+
+# Run migrations and seed
+CMD ["sh", "-c", "pnpm prisma generate && pnpm prisma db push && pnpm run db:seed && echo 'Database migrated and seeded successfully!'"]

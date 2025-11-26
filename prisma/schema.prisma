@@ -1,0 +1,155 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String?  // Optional password for profile protection
+  avatarColor  String   @default("#3B82F6") // Color for user avatar
+  openaiApiKey String?  // OpenAI API key for AI assistant
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  accounts        Account[]
+  categories      Category[]
+  tags            Tag[]
+  transactions    Transaction[]
+  recurringRules  RecurringRule[]
+}
+
+model Account {
+  id             String   @id @default(uuid())
+  userId         String
+  name           String
+  isDefault      Boolean  @default(false)
+  initialBalance Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  userId    String?
+  name      String
+  type      String   // INCOME or EXPENSE
+  isDefault Boolean  @default(false)
+  color     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([type])
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions TransactionOnTags[]
+
+  @@index([userId])
+}
+
+model Transaction {
+  id              String    @id @default(uuid())
+  userId          String
+  accountId       String
+  categoryId      String
+  type            String    // INCOME or EXPENSE
+  description     String
+  amount          Float
+  dueDate         DateTime  // Data base (para transações únicas) ou data de início (para recorrentes/parcelas)
+  paidDate        DateTime?
+  status          String    // PENDING, PAID, OVERDUE
+  notes           String?   // Observações
+  isRecurring     Boolean   @default(false)
+  isFixed         Boolean   @default(false)  // Despesa fixa (aparece todo mês indefinidamente)
+  installments    Int?      // Número total de parcelas (ex: 12 para 12x)
+  
+  // Campos para transações virtuais
+  startDate       DateTime? // Data de início para parcelas/fixas (se diferente de dueDate)
+  endDate         DateTime? // Data final para parcelas (calculada: startDate + installments meses)
+  dayOfMonth      Int?      // Dia do mês para recorrência (1-31)
+  
+  // Override: quando usuário edita uma ocorrência específica de transação virtual
+  isOverride            Boolean   @default(false)  // True se é um override de ocorrência específica
+  overrideForDate       DateTime? // Data da ocorrência que este registro sobrescreve
+  parentTransactionId   String?   // ID da transação pai (para overrides ou cancelamentos)
+  
+  // Cancelamento de ocorrência específica
+  cancelledOccurrences  String[]  // Lista de datas canceladas (formato: "2025-01", "2025-02")
+  
+  // Legado (manter para compatibilidade durante migração)
+  currentInstallment Int?   // Será removido após migração
+  recurringRuleId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account       Account               @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  category      Category              @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  recurringRule RecurringRule?        @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
+  tags          TransactionOnTags[]
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([categoryId])
+  @@index([dueDate])
+  @@index([status])
+  @@index([type])
+  @@index([parentTransactionId])
+  @@index([isFixed])
+  @@index([installments])
+  @@index([isOverride])
+}
+
+model TransactionOnTags {
+  transactionId String
+  tagId         String
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  tag         Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([transactionId, tagId])
+  @@index([transactionId])
+  @@index([tagId])
+}
+
+model RecurringRule {
+  id         String    @id @default(uuid())
+  userId     String
+  type       String    // DAILY, WEEKLY, MONTHLY, YEARLY, FIXED
+  startDate  DateTime
+  endDate    DateTime?
+  dayOfMonth Int?
+  dayOfWeek  Int?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+}
