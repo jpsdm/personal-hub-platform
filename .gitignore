@@ -61,7 +61,7 @@ coverage/
 
 # Prisma
 # Keep generated folder for now as it's needed for imports
-# generated/
+generated/
 
 # Misc
 *.log
