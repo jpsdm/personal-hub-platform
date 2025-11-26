@@ -31,6 +31,12 @@ async function main() {
     userId: null,
   }));
 
+  const count = await prisma.category.count();
+  if (count > 0) {
+    console.log("✅ Categorias já existem, pulando seed.");
+    return;
+  }
+
   await prisma.category.createMany({
     data: defaultCategories,
     skipDuplicates: true, // evita duplicatas por unique(name, userId)

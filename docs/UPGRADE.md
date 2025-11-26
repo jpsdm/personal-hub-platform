@@ -2,111 +2,34 @@
 
 Este guia explica como atualizar o Personal Hub Platform para uma nova versão.
 
+> **Nota**: O banco de dados **NÃO é afetado** durante a atualização. Seus dados estão seguros no volume Docker.
+
 ---
 
 ## 📋 Índice
 
-- [Atualização via Docker (Recomendado)](#-atualização-via-docker-recomendado)
-- [Atualização Manual (Código Fonte)](#-atualização-manual-código-fonte)
-- [Backup antes de Atualizar](#-backup-antes-de-atualizar)
+- [Etapa 1: Atualizar o Código](#-etapa-1-atualizar-o-código)
+- [Etapa 2: Atualizar o Docker (Opcional)](#-etapa-2-atualizar-o-docker-opcional)
 - [Rollback (Voltar Versão Anterior)](#-rollback-voltar-versão-anterior)
 - [Solução de Problemas](#-solução-de-problemas)
 
 ---
 
-## 🐳 Atualização via Docker (Recomendado)
+## 📥 Etapa 1: Atualizar o Código
 
-Se você está usando Docker, siga estes passos:
+Esta etapa baixa as atualizações do repositório e aplica as migrações no banco de dados.
 
-### 1. Verificar versão atual
+### 1.1 Verificar versão atual
 
-```bash
-docker exec finance-app cat package.json | grep version
-```
+```powershell
+# Windows (PowerShell)
+Get-Content package.json | Select-String "version"
 
-### 2. Fazer backup do banco de dados
-
-```bash
-# Criar backup antes de atualizar
-docker exec finance-db pg_dump -U finance finance > backup_$(date +%Y%m%d_%H%M%S).sql
-```
-
-### 3. Parar os containers
-
-```bash
-docker-compose down
-```
-
-### 4. Baixar a nova imagem
-
-```bash
-# Baixar última versão
-docker pull jpsdm/personal-hub-platform:latest
-
-# Ou uma versão específica
-docker pull jpsdm/personal-hub-platform:1.0.0
-```
-
-### 5. Atualizar o docker-compose.yml (se necessário)
-
-Se houver mudanças no `docker-compose.yml`, baixe a versão atualizada:
-
-```bash
-# Backup do arquivo atual
-cp docker-compose.yml docker-compose.yml.bak
-
-# Baixar nova versão
-curl -O https://raw.githubusercontent.com/jpsdm/personal-hub-platform/master/docker-compose.yml
-```
-
-### 6. Iniciar com a nova versão
-
-```bash
-docker-compose up -d
-```
-
-### 7. Executar migrações (se houver)
-
-```bash
-docker-compose --profile migrate up migrate
-```
-
-### 8. Verificar se está funcionando
-
-```bash
-# Ver logs
-docker-compose logs -f app
-
-# Verificar status
-docker-compose ps
-```
-
-### 9. Limpar imagens antigas (opcional)
-
-```bash
-# Remover imagens não utilizadas
-docker image prune -a
-```
-
----
-
-## 💻 Atualização Manual (Código Fonte)
-
-Se você clonou o repositório e roda localmente:
-
-### 1. Verificar versão atual
-
-```bash
+# Linux/Mac
 cat package.json | grep version
 ```
 
-### 2. Fazer backup do banco de dados
-
-```bash
-pg_dump -U seu_usuario seu_banco > backup_$(date +%Y%m%d_%H%M%S).sql
-```
-
-### 3. Baixar as atualizações
+### 1.2 Baixar atualizações do repositório
 
 ```bash
 # Salvar alterações locais (se houver)
@@ -115,7 +38,7 @@ git stash
 # Buscar atualizações
 git fetch origin
 
-# Ver as mudanças
+# Ver o que mudou
 git log HEAD..origin/master --oneline
 
 # Aplicar atualizações
@@ -125,110 +48,117 @@ git pull origin master
 git stash pop
 ```
 
-### 4. Instalar dependências atualizadas
+### 1.3 Instalar novas dependências
 
 ```bash
 pnpm install
 ```
 
-### 5. Gerar Prisma Client
+### 1.4 Gerar Prisma Client atualizado
 
 ```bash
 pnpm prisma generate
 ```
 
-### 6. Executar migrações do banco
+### 1.5 Aplicar migrações no banco de dados
+
+> **Importante**: Este comando aplica as migrações **sem perder dados**.
 
 ```bash
+# Aplicar migrações pendentes
 pnpm prisma db push
 ```
 
-### 7. Fazer build da aplicação
+### 1.6 Verificar nova versão
 
-```bash
-pnpm build
+```powershell
+# Windows (PowerShell)
+Get-Content package.json | Select-String "version"
+
+# Linux/Mac
+cat package.json | grep version
 ```
 
-### 8. Reiniciar a aplicação
+✅ **Pronto!** O código está atualizado. Se você roda localmente (sem Docker), basta reiniciar:
 
 ```bash
-# Se estiver usando PM2
-pm2 restart personal-hub
+# Parar o servidor atual (Ctrl+C) e iniciar novamente
+pnpm dev
 
-# Ou reinicie manualmente
+# Ou para produção
+pnpm build
 pnpm start
 ```
 
 ---
 
-## 💾 Backup antes de Atualizar
+## 🐳 Etapa 2: Atualizar o Docker (Opcional)
 
-**IMPORTANTE**: Sempre faça backup antes de atualizar!
+Se você usa Docker, siga esta etapa para reconstruir a imagem com o código atualizado.
 
-### Backup do Banco de Dados
+> **Nota**: O banco de dados está em um volume separado e **NÃO será afetado**.
 
-#### Docker:
+### 2.1 Verificar se o código foi atualizado
 
-```bash
-# Criar pasta de backups
-mkdir -p backups
+Certifique-se de ter completado a [Etapa 1](#-etapa-1-atualizar-o-código) primeiro.
 
-# Exportar banco
-docker exec finance-db pg_dump -U finance finance > backups/backup_$(date +%Y%m%d_%H%M%S).sql
-```
-
-#### Local:
+### 2.2 Parar os containers
 
 ```bash
-pg_dump -U seu_usuario -h localhost seu_banco > backup_$(date +%Y%m%d_%H%M%S).sql
-```
-
-### Backup do arquivo .env
-
-```bash
-cp .env .env.backup
-```
-
-### Backup completo (Docker volumes)
-
-```bash
-# Parar containers
 docker-compose down
+```
 
-# Backup do volume
-docker run --rm -v personal-finance-platform-v2_postgres_data:/data -v $(pwd)/backups:/backup alpine tar czf /backup/postgres_data_$(date +%Y%m%d_%H%M%S).tar.gz /data
+> ⚠️ **NÃO use** `docker-compose down -v` (isso apaga os volumes/dados)
+
+### 2.3 Reconstruir a imagem
+
+```bash
+# Rebuild forçando recriação sem cache
+docker-compose build --no-cache app
+```
+
+### 2.4 Iniciar os containers
+
+```bash
+docker-compose up -d
+```
+
+### 2.5 Aplicar migrações no banco do Docker
+
+```bash
+docker-compose --profile migrate up migrate --build
+```
+
+### 2.6 Verificar se está funcionando
+
+```bash
+# Ver logs
+docker-compose logs -f app
+
+# Verificar status
+docker-compose ps
+```
+
+### 2.7 Limpar imagens antigas (opcional)
+
+```bash
+# Remover imagens não utilizadas
+docker image prune -f
 ```
 
 ---
 
 ## ⏪ Rollback (Voltar Versão Anterior)
 
-Se algo der errado, você pode voltar para a versão anterior:
+Se algo der errado, você pode voltar para a versão anterior.
 
-### Docker:
-
-```bash
-# Parar containers
-docker-compose down
-
-# Usar versão específica anterior
-docker pull jpsdm/personal-hub-platform:0.1.0
-
-# Atualizar docker-compose.yml para usar a versão antiga
-# Edite a linha: image: jpsdm/personal-hub-platform:0.1.0
-
-# Reiniciar
-docker-compose up -d
-
-# Restaurar backup do banco (se necessário)
-cat backup_YYYYMMDD_HHMMSS.sql | docker exec -i finance-db psql -U finance finance
-```
-
-### Manual:
+### Voltar código para versão anterior
 
 ```bash
-# Voltar para commit anterior
-git log --oneline  # Encontrar o commit desejado
+# Ver histórico de commits
+git log --oneline
+
+# Voltar para um commit específico
 git checkout <commit-hash>
 
 # Ou voltar para uma tag específica
@@ -237,11 +167,21 @@ git checkout v0.1.0
 # Reinstalar dependências
 pnpm install
 
-# Rebuild
-pnpm build
+# Gerar Prisma Client
+pnpm prisma generate
+```
 
-# Restaurar banco (se necessário)
-psql -U seu_usuario -h localhost seu_banco < backup_YYYYMMDD_HHMMSS.sql
+### Reconstruir Docker com versão anterior
+
+```bash
+# Parar containers
+docker-compose down
+
+# Rebuild com código revertido
+docker-compose build --no-cache app
+
+# Iniciar
+docker-compose up -d
 ```
 
 ---
@@ -261,18 +201,23 @@ docker-compose ps db
 docker-compose restart db
 
 # Aguardar e reiniciar app
-sleep 10
 docker-compose restart app
 ```
 
-### Erro: Migração falhou
+### Erro: Conflito no git pull
 
 ```bash
-# Ver status das migrações
-docker-compose exec app npx prisma migrate status
+# Ver arquivos com conflito
+git status
 
-# Forçar reset (CUIDADO: apaga dados!)
-docker-compose exec app npx prisma migrate reset --force
+# Opção 1: Descartar alterações locais
+git checkout -- .
+git pull origin master
+
+# Opção 2: Resolver conflitos manualmente
+# Edite os arquivos, depois:
+git add .
+git commit -m "Resolve conflicts"
 ```
 
 ### Erro: Dependências incompatíveis
@@ -286,41 +231,64 @@ pnpm install
 
 ### Erro: Porta já em uso
 
-```bash
-# Verificar o que está usando a porta
-# Windows:
+```powershell
+# Windows (PowerShell)
 netstat -ano | findstr :3000
-
-# Linux/Mac:
-lsof -i :3000
-
-# Matar processo
-# Windows:
 taskkill /PID <PID> /F
 
-# Linux/Mac:
+# Linux/Mac
+lsof -i :3000
 kill -9 <PID>
 ```
 
-### Erro: Imagem Docker corrompida
+### Erro: Prisma migration falhou
 
 ```bash
-# Remover imagem e baixar novamente
-docker rmi jpsdm/personal-hub-platform:latest
-docker pull jpsdm/personal-hub-platform:latest
-docker-compose up -d --force-recreate
+# Ver status das migrações
+pnpm prisma migrate status
+
+# Forçar sincronização (seguro, não perde dados)
+pnpm prisma db push --accept-data-loss
+```
+
+### Erro: Docker build falhou
+
+```bash
+# Limpar cache do Docker
+docker builder prune -f
+
+# Rebuild
+docker-compose build --no-cache app
 ```
 
 ---
 
 ## 📌 Checklist de Atualização
 
-- [ ] Verificar notas da versão no GitHub
-- [ ] Fazer backup do banco de dados
-- [ ] Fazer backup do arquivo .env
-- [ ] Baixar nova versão (Docker pull ou git pull)
-- [ ] Atualizar docker-compose.yml se necessário
-- [ ] Executar migrações
-- [ ] Verificar logs após iniciar
-- [ ] Testar funcionalidades principais
-- [ ] Limpar imagens/arquivos antigos
+### Etapa 1 - Código:
+
+- [ ] `git pull origin master`
+- [ ] `pnpm install`
+- [ ] `pnpm prisma generate`
+- [ ] `pnpm prisma db push`
+
+### Etapa 2 - Docker (opcional):
+
+- [ ] `docker-compose down`
+- [ ] `docker-compose build --no-cache app`
+- [ ] `docker-compose up -d`
+- [ ] `docker-compose --profile migrate up migrate --build`
+- [ ] `docker-compose logs -f app` (verificar)
+
+---
+
+## 📞 Suporte
+
+Se encontrar problemas durante a atualização:
+
+1. Verifique as [Issues no GitHub](https://github.com/jpsdm/personal-hub-platform/issues)
+2. Consulte as [Discussões](https://github.com/jpsdm/personal-hub-platform/discussions)
+3. Abra uma nova issue com:
+   - Versão atual e versão alvo
+   - Mensagens de erro
+   - Sistema operacional
