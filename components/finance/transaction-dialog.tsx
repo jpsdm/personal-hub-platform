@@ -93,6 +93,7 @@ export function TransactionDialog({
       }
     } else {
       // Reset quando abrir para criar novo
+      setType(defaultType);
       setIsFixed(false);
       setInstallments("");
       setIsRecurring(false);
@@ -101,7 +102,7 @@ export function TransactionDialog({
       setSelectedCategory("");
       setAmount(0);
     }
-  }, [transaction, open]);
+  }, [transaction, open, defaultType]);
 
   useEffect(() => {
     if (open) {

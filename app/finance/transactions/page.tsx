@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 export interface TransactionFilters {
   startDate?: string;
@@ -21,17 +22,45 @@ export interface TransactionFilters {
   year?: string;
 }
 
-export default function TransactionsPage() {
+function TransactionsPageContent() {
+  const searchParams = useSearchParams();
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState<"income" | "expense">("expense");
   const [refreshKey, setRefreshKey] = useState(0);
   const [filters, setFilters] = useState<TransactionFilters>({});
   const [selectedMonth, setSelectedMonth] = useState(
     `${currentYear}-${String(currentMonth).padStart(2, "0")}`
   );
+
+  // Verificar query params para abrir dialog automaticamente
+  useEffect(() => {
+    const action = searchParams.get("action");
+    const type = searchParams.get("type");
+
+    if (action === "new") {
+      if (type === "income") {
+        setDialogType("income");
+      } else if (type === "expense") {
+        setDialogType("expense");
+      }
+      setDialogOpen(true);
+
+      // Limpar os query params da URL sem recarregar a página
+      const url = new URL(window.location.href);
+      url.searchParams.delete("action");
+      url.searchParams.delete("type");
+      window.history.replaceState({}, "", url.pathname);
+    }
+  }, [searchParams]);
+
+  const handleOpenDialog = (type: "income" | "expense" = "expense") => {
+    setDialogType(type);
+    setDialogOpen(true);
+  };
 
   const handleSuccess = () => {
     setRefreshKey((prev) => prev + 1);
@@ -98,7 +127,7 @@ export default function TransactionsPage() {
               className="w-[200px]"
             />
           </div>
-          <Button className="gap-2 mt-5" onClick={() => setDialogOpen(true)}>
+          <Button className="gap-2 mt-5" onClick={() => handleOpenDialog()}>
             <Plus className="w-4 h-4" />
             Novo Lançamento
           </Button>
@@ -114,8 +143,23 @@ export default function TransactionsPage() {
       <TransactionDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        defaultType={dialogType}
         onSuccess={handleSuccess}
       />
     </div>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="text-center py-8 text-muted-foreground">
+          Carregando...
+        </div>
+      }
+    >
+      <TransactionsPageContent />
+    </Suspense>
   );
 }
