@@ -212,6 +212,12 @@ docker-compose up -d --build
 
 ---
 
+## 🔄 Atualização
+
+Consulte o [Guia de Atualização](docs/UPGRADE.md) para instruções detalhadas sobre como atualizar para novas versões.
+
+---
+
 ## 🤝 Contribuindo
 
 Contribuições são bem-vindas! Por favor:
