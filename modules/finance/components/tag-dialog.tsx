@@ -11,12 +11,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type React from "react";
 import { useState } from "react";
+import type { Tag } from "../types";
 
 interface TagDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
-  tag?: any;
+  tag?: Tag | null;
 }
 
 export function TagDialog({

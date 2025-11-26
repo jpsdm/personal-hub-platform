@@ -4,7 +4,7 @@ import {
   expandTransactions,
   type TransactionWithRelations,
   type VirtualOccurrence,
-} from "@/lib/virtual-transactions";
+} from "@/modules/finance";
 import { NextResponse } from "next/server";
 
 // Função auxiliar para obter o último dia de um mês

@@ -27,7 +27,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatCurrency, formatDate } from "@/lib/finance-utils";
 import {
   AlertCircle,
   ArrowDownCircle,
@@ -42,32 +41,9 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { formatCurrency, formatDate } from "../lib/utils";
+import type { VirtualOccurrence } from "../types";
 import { TransactionDialog } from "./transaction-dialog";
-
-interface Transaction {
-  id: string;
-  realId?: string | null; // ID real (null se for virtual pura)
-  parentId?: string; // ID da transação raiz
-  description: string;
-  type: string;
-  amount: number;
-  dueDate: string;
-  paidDate: string | null;
-  status: string;
-  notes?: string;
-  isFixed?: boolean;
-  isRecurring?: boolean;
-  installments?: number;
-  currentInstallment?: number | null;
-  parentTransactionId?: string;
-  isVirtual?: boolean; // True se é ocorrência virtual
-  isOverride?: boolean; // True se é um override
-  accountId?: string;
-  categoryId?: string;
-  account: { name: string };
-  category: { name: string };
-  tags: Array<{ tag: { name: string } }>;
-}
 
 type ActionScope = "single" | "future" | "all";
 type ActionType = "edit" | "delete";
@@ -119,11 +95,11 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function TransactionsList({ filters = {} }: TransactionsListProps) {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<VirtualOccurrence[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] =
-    useState<Transaction | null>(null);
+    useState<VirtualOccurrence | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(
     null
@@ -132,9 +108,8 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
   // Dialog para escolher escopo de edição/exclusão (recorrente/parcelado)
   const [scopeDialogOpen, setScopeDialogOpen] = useState(false);
   const [scopeAction, setScopeAction] = useState<ActionType>("delete");
-  const [scopeTransaction, setScopeTransaction] = useState<Transaction | null>(
-    null
-  );
+  const [scopeTransaction, setScopeTransaction] =
+    useState<VirtualOccurrence | null>(null);
 
   // Calcular totais baseado no tipo de filtro
   const totals = useMemo(() => {
@@ -211,7 +186,7 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
     }
   };
 
-  const handleEdit = (transaction: Transaction) => {
+  const handleEdit = (transaction: VirtualOccurrence) => {
     // Transações fixas ou parceladas (virtuais): pode editar individualmente ou em lote
     const isFixedOrInstallment =
       transaction.isFixed ||
@@ -230,7 +205,7 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
     }
   };
 
-  const handleDeleteClick = (transaction: Transaction) => {
+  const handleDeleteClick = (transaction: VirtualOccurrence) => {
     // Transações fixas ou parceladas (virtuais): pode excluir individualmente ou em lote
     const isFixedOrInstallment =
       transaction.isFixed ||
@@ -266,7 +241,7 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
   };
 
   const handleDeleteWithScope = async (
-    transaction: Transaction,
+    transaction: VirtualOccurrence,
     scope: ActionScope
   ) => {
     try {
@@ -304,7 +279,7 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
     }
   };
 
-  const handleMarkAsPaid = async (transaction: Transaction) => {
+  const handleMarkAsPaid = async (transaction: VirtualOccurrence) => {
     try {
       // Para transações virtuais, precisamos criar um override com status PAID
       const response = await fetch(`/api/transactions/${transaction.id}`, {
@@ -793,39 +768,6 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
                               </Tooltip>
                             </TooltipProvider>
                           )}
-                          {/* {transaction.isVirtual && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded cursor-help">
-                                    V
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-sm">
-                                    Ocorrência virtual (calculada
-                                    automaticamente)
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          {transaction.isOverride && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400 rounded cursor-help">
-                                    O
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-sm">
-                                    Ocorrência modificada (override)
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )} */}
                         </div>
                       </TableCell>
                       <TableCell>

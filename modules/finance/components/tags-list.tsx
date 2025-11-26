@@ -14,12 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Edit, Hash, Tag, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { Tag as TagType } from "../types";
 import { TagDialog } from "./tag-dialog";
-
-interface TagType {
-  id: string;
-  name: string;
-}
 
 const colorClasses = [
   {

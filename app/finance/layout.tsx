@@ -1,5 +1,4 @@
-import { AiChat } from "@/components/finance/ai-chat";
-import { SettingsDialog } from "@/components/finance/settings-dialog";
+import { AiChat, SettingsDialog } from "@/modules/finance";
 import {
   Building2,
   FolderOpen,
