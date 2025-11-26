@@ -22,6 +22,20 @@ Uma plataforma pessoal completa para gerenciamento de finanças com assistente d
 - Obtenha resumos e análises financeiras
 - Integração com OpenAI GPT
 
+### 👥 Multi-perfil
+
+- Suporte a múltiplos usuários
+- Proteção opcional por senha
+- Dados isolados por perfil
+
+![Profile](.github/images/profile_light.png)
+
+### Hub de Funções
+
+- Feito para agrupar as funcionalidades
+
+![Hub de Funções](.github/images/hub_combined.png)
+
 ### 📊 Dashboard
 
 - Visão geral do saldo e movimentações
@@ -41,14 +55,6 @@ Uma plataforma pessoal completa para gerenciamento de finanças com assistente d
 ![Transações](.github/images/transaction_combined.png)
 
 ![Criar Transação](.github/images/transaction_create_combined.png)
-
-### 👥 Multi-perfil
-
-- Suporte a múltiplos usuários
-- Proteção opcional por senha
-- Dados isolados por perfil
-
-![Hub de Perfis](.github/images/hub_combined.png)
 
 ---
 
