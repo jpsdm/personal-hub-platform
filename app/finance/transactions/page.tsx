@@ -1,13 +1,16 @@
 "use client";
 
-import { TransactionDialog } from "@/components/finance/transaction-dialog";
-import { TransactionFilters as Filters } from "@/components/finance/transaction-filters";
-import { TransactionsList } from "@/components/finance/transactions-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  TransactionFilters as Filters,
+  TransactionDialog,
+  TransactionsList,
+} from "@/modules/finance";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export interface TransactionFilters {
   startDate?: string;
@@ -26,12 +29,33 @@ export default function TransactionsPage() {
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [defaultType, setDefaultType] = useState<"income" | "expense">(
+    "expense"
+  );
   const [refreshKey, setRefreshKey] = useState(0);
   const [filters, setFilters] = useState<TransactionFilters>({});
   const [selectedMonth, setSelectedMonth] = useState(
     `${currentYear}-${String(currentMonth).padStart(2, "0")}`
   );
+
+  // Verificar parâmetros da URL para abrir dialog automaticamente
+  useEffect(() => {
+    const action = searchParams.get("action");
+    const type = searchParams.get("type");
+
+    if (action === "new") {
+      if (type === "income" || type === "expense") {
+        setDefaultType(type);
+      }
+      setDialogOpen(true);
+      // Limpar os parâmetros da URL após abrir o dialog
+      router.replace("/finance/transactions", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const handleSuccess = () => {
     setRefreshKey((prev) => prev + 1);
@@ -45,6 +69,11 @@ export default function TransactionsPage() {
   const handleMonthChange = (value: string) => {
     setSelectedMonth(value);
     setRefreshKey((prev) => prev + 1);
+  };
+
+  const handleOpenDialog = (type: "income" | "expense" = "expense") => {
+    setDefaultType(type);
+    setDialogOpen(true);
   };
 
   // Verificar se há filtros ativos (exceto datas)
@@ -98,7 +127,7 @@ export default function TransactionsPage() {
               className="w-[200px]"
             />
           </div>
-          <Button className="gap-2 mt-5" onClick={() => setDialogOpen(true)}>
+          <Button className="gap-2 mt-5" onClick={() => handleOpenDialog()}>
             <Plus className="w-4 h-4" />
             Novo Lançamento
           </Button>
@@ -114,6 +143,7 @@ export default function TransactionsPage() {
       <TransactionDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        defaultType={defaultType}
         onSuccess={handleSuccess}
       />
     </div>

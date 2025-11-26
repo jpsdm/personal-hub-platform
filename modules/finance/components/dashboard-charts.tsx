@@ -1,3 +1,5 @@
+"use client";
+
 import { Card } from "@/components/ui/card";
 import {
   Bar,
@@ -12,6 +14,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { CURRENCY } from "../lib/constants";
 
 interface MonthlyData {
   month: string;
@@ -53,7 +56,7 @@ export function DashboardCharts({
               className="text-xs"
               tick={{ fill: "var(--muted-foreground)" }}
               tickFormatter={(value) =>
-                new Intl.NumberFormat("pt-BR", {
+                new Intl.NumberFormat(CURRENCY.locale, {
                   notation: "compact",
                   compactDisplay: "short",
                 }).format(value)
@@ -66,9 +69,9 @@ export function DashboardCharts({
                 borderRadius: "0.5rem",
               }}
               formatter={(value: number) =>
-                new Intl.NumberFormat("pt-BR", {
+                new Intl.NumberFormat(CURRENCY.locale, {
                   style: "currency",
-                  currency: "BRL",
+                  currency: CURRENCY.code,
                 }).format(value)
               }
             />
@@ -97,12 +100,12 @@ export function DashboardCharts({
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie
-              data={categoryData}
+              data={categoryData as any}
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={({ name, percent }) =>
-                `${name}: ${(percent * 100).toFixed(0)}%`
+              label={({ name, percent }: any) =>
+                `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
               }
               outerRadius={100}
               fill="#8884d8"
@@ -119,9 +122,9 @@ export function DashboardCharts({
                 borderRadius: "0.5rem",
               }}
               formatter={(value: number) =>
-                new Intl.NumberFormat("pt-BR", {
+                new Intl.NumberFormat(CURRENCY.locale, {
                   style: "currency",
-                  currency: "BRL",
+                  currency: CURRENCY.code,
                 }).format(value)
               }
             />

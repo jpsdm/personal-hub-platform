@@ -18,12 +18,13 @@ import {
 } from "@/components/ui/select";
 import type React from "react";
 import { useEffect, useState } from "react";
+import type { Category } from "../types";
 
 interface CategoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
-  category?: any;
+  category?: Category | null;
 }
 
 export function CategoryDialog({

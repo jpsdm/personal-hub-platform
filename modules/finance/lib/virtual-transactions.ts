@@ -14,42 +14,17 @@
  * - Override: Registro real que sobrescreve uma ocorrência virtual específica
  */
 
-import type { Account, Category, Tag, Transaction } from "@/generated/prisma";
+import type {
+  InstallmentInfo,
+  TransactionStatus,
+  TransactionWithRelations,
+  VirtualOccurrence,
+} from "../types";
+import { LIMITS, VIRTUAL_ID_SEPARATOR } from "./constants";
 
-// Tipo para transação com relacionamentos
-export interface TransactionWithRelations extends Transaction {
-  account: Account;
-  category: Category;
-  tags: { tag: Tag }[];
-}
-
-// Tipo para ocorrência virtual
-export interface VirtualOccurrence {
-  id: string; // ID virtual: "parentId_YYYY-MM" ou ID real para overrides
-  realId: string | null; // ID real se for override, null se for virtual puro
-  parentId: string; // ID da transação raiz
-  userId: string;
-  accountId: string;
-  categoryId: string;
-  type: string;
-  description: string;
-  amount: number;
-  dueDate: Date; // Data calculada para este mês
-  paidDate: Date | null;
-  status: string;
-  notes: string | null;
-  isFixed: boolean;
-  installments: number | null;
-  currentInstallment: number | null; // Número da parcela (1, 2, 3...)
-  isVirtual: boolean; // True se é ocorrência virtual, false se é override
-  isOverride: boolean; // True se tem registro de override no banco
-  account: Account;
-  category: Category;
-  tags: { tag: Tag }[];
-}
-
-// Formato do ID virtual
-const VIRTUAL_ID_SEPARATOR = "::";
+// ==========================================
+// VIRTUAL ID MANAGEMENT
+// ==========================================
 
 /**
  * Gera um ID virtual para uma ocorrência
@@ -100,6 +75,10 @@ export function getOccurrenceKey(date: Date): string {
   return `${year}-${month}`;
 }
 
+// ==========================================
+// DATE HELPERS
+// ==========================================
+
 /**
  * Obtém o último dia de um mês
  */
@@ -128,6 +107,10 @@ function isDateInRange(date: Date, startDate: Date, endDate: Date): boolean {
   return date >= startDate && date <= endDate;
 }
 
+// ==========================================
+// TRANSACTION EXPANSION
+// ==========================================
+
 /**
  * Expande uma transação raiz em suas ocorrências virtuais para um período
  */
@@ -150,13 +133,13 @@ export function expandTransaction(
         userId: transaction.userId,
         accountId: transaction.accountId,
         categoryId: transaction.categoryId,
-        type: transaction.type,
+        type: transaction.type as "INCOME" | "EXPENSE",
         description: transaction.description,
         amount: transaction.amount,
         dueDate: dueDate,
-        paidDate: transaction.paidDate,
-        status: transaction.status,
-        notes: transaction.notes,
+        paidDate: transaction.paidDate ? new Date(transaction.paidDate) : null,
+        status: transaction.status as TransactionStatus,
+        notes: transaction.notes || null,
         isFixed: false,
         installments: null,
         currentInstallment: null,
@@ -229,15 +212,15 @@ export function expandTransaction(
             userId: override.userId,
             accountId: override.accountId,
             categoryId: override.categoryId,
-            type: override.type,
+            type: override.type as "INCOME" | "EXPENSE",
             description: override.description,
             amount: override.amount,
             dueDate: new Date(override.dueDate),
-            paidDate: override.paidDate,
-            status: override.status,
-            notes: override.notes,
+            paidDate: override.paidDate ? new Date(override.paidDate) : null,
+            status: override.status as TransactionStatus,
+            notes: override.notes || null,
             isFixed: transaction.isFixed,
-            installments: transaction.installments,
+            installments: transaction.installments || null,
             currentInstallment: installmentNumber,
             isVirtual: false,
             isOverride: true,
@@ -254,15 +237,15 @@ export function expandTransaction(
             userId: transaction.userId,
             accountId: transaction.accountId,
             categoryId: transaction.categoryId,
-            type: transaction.type,
+            type: transaction.type as "INCOME" | "EXPENSE",
             description: transaction.description,
             amount: transaction.amount,
             dueDate: occurrenceDate,
             paidDate: null, // Ocorrências virtuais começam sem data de pagamento
-            status: occurrenceDate < new Date() ? "PENDING" : "PENDING", // Pode ser OVERDUE se passado
-            notes: transaction.notes,
+            status: occurrenceDate < new Date() ? "PENDING" : "PENDING",
+            notes: transaction.notes || null,
             isFixed: transaction.isFixed,
-            installments: transaction.installments,
+            installments: transaction.installments || null,
             currentInstallment: isInstallment ? installmentNumber : null,
             isVirtual: true,
             isOverride: false,
@@ -281,8 +264,8 @@ export function expandTransaction(
       currentYear++;
     }
 
-    // Limite de segurança: não gerar mais de 10 anos no futuro
-    if (currentYear - startYear > 10) {
+    // Limite de segurança: não gerar mais de N anos no futuro
+    if (currentYear - startYear > LIMITS.YEARS_AHEAD_VIRTUAL) {
       break;
     }
   }
@@ -338,6 +321,10 @@ export function expandTransactions(
   return allOccurrences;
 }
 
+// ==========================================
+// INSTALLMENT INFO
+// ==========================================
+
 /**
  * Calcula informações de uma série de parcelas
  */
@@ -345,16 +332,7 @@ export function getInstallmentInfo(
   transaction: TransactionWithRelations,
   overrides: TransactionWithRelations[],
   referenceDate: Date = new Date()
-): {
-  totalInstallments: number;
-  paidInstallments: number;
-  pendingInstallments: number;
-  currentInstallment: number;
-  startDate: Date;
-  endDate: Date;
-  installmentAmount: number;
-  totalAmount: number;
-} | null {
+): InstallmentInfo | null {
   if (!transaction.installments || transaction.installments <= 1) {
     return null;
   }
@@ -435,23 +413,45 @@ export function getInstallmentInfo(
   };
 }
 
+// ==========================================
+// HELPER FUNCTIONS
+// ==========================================
+
 /**
- * Formata a descrição de uma parcela
- * Ex: "Netflix (2/12)" ou "Aluguel (Fixo)"
+ * Verifica se uma transação é recorrente (fixa ou parcelada)
  */
-export function formatInstallmentDescription(
-  description: string,
-  currentInstallment: number | null,
-  totalInstallments: number | null,
-  isFixed: boolean
-): string {
-  if (isFixed) {
-    return `${description} (Fixo)`;
-  }
+export function isRecurringTransaction(
+  transaction: TransactionWithRelations
+): boolean {
+  return (
+    transaction.isFixed ||
+    (transaction.installments != null && transaction.installments > 1)
+  );
+}
 
-  if (currentInstallment && totalInstallments) {
-    return `${description} (${currentInstallment}/${totalInstallments})`;
-  }
+/**
+ * Verifica se uma transação é parcelada
+ */
+export function isInstallmentTransaction(
+  transaction: TransactionWithRelations
+): boolean {
+  return transaction.installments != null && transaction.installments > 1;
+}
 
-  return description;
+/**
+ * Verifica se uma transação é fixa
+ */
+export function isFixedTransaction(
+  transaction: TransactionWithRelations
+): boolean {
+  return transaction.isFixed;
+}
+
+/**
+ * Obtém o número total de parcelas de uma transação
+ */
+export function getTotalInstallments(
+  transaction: TransactionWithRelations
+): number | null {
+  return transaction.installments ?? null;
 }

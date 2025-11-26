@@ -27,27 +27,20 @@ import {
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { Account, Category, Tag as TagType } from "../types";
+
+export interface TransactionFiltersState {
+  startDate?: string;
+  endDate?: string;
+  type?: string;
+  status?: string;
+  categoryId?: string;
+  accountId?: string;
+  tagId?: string;
+}
 
 interface TransactionFiltersProps {
-  onFiltersChange: (filters: any) => void;
-}
-
-interface Account {
-  id: string;
-  name: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  type: string;
-  color?: string;
-}
-
-interface TagItem {
-  id: string;
-  name: string;
-  color?: string;
+  onFiltersChange: (filters: TransactionFiltersState) => void;
 }
 
 export function TransactionFilters({
@@ -64,7 +57,7 @@ export function TransactionFilters({
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [tags, setTags] = useState<TagItem[]>([]);
+  const [tags, setTags] = useState<TagType[]>([]);
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
 
   useEffect(() => {
@@ -110,7 +103,7 @@ export function TransactionFilters({
   };
 
   const applyFilters = () => {
-    const filters: any = {};
+    const filters: TransactionFiltersState = {};
 
     if (startDate) filters.startDate = startDate;
     if (endDate) filters.endDate = endDate;
@@ -128,7 +121,7 @@ export function TransactionFilters({
       categoryId ||
       accountId ||
       tagId;
-    setHasActiveFilters(hasFilters);
+    setHasActiveFilters(!!hasFilters);
 
     onFiltersChange(filters);
   };
@@ -374,7 +367,6 @@ export function TransactionFilters({
                   options={tags.map((tag) => ({
                     value: tag.id,
                     label: tag.name,
-                    color: tag.color,
                   }))}
                   placeholder="Todas as tags"
                   emptyText="Nenhuma tag encontrada"

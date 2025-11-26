@@ -21,14 +21,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { Category } from "../types";
 import { CategoryDialog } from "./category-dialog";
-
-interface Category {
-  id: string;
-  name: string;
-  type: string;
-  isDefault: boolean;
-}
 
 function CategoryCard({
   category,

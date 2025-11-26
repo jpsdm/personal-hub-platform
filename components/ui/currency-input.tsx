@@ -143,6 +143,7 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
           type="text"
           inputMode="numeric"
           value={formatCurrency(centavos, isNegative)}
+          onChange={() => {}} // Controlled by onKeyDown
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           onPaste={handlePaste}

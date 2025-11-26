@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatCurrency } from "@/lib/finance-utils";
 import {
   AlertTriangle,
   ArrowRightLeft,
@@ -31,22 +30,9 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { formatCurrency } from "../lib/utils";
+import type { Account, DeleteAccountInfo } from "../types";
 import { AccountDialog } from "./account-dialog";
-
-interface Account {
-  id: string;
-  name: string;
-  isDefault: boolean;
-  initialBalance: number;
-  currentBalance: number;
-  createdAt: string;
-}
-
-interface DeleteInfo {
-  hasTransactions: boolean;
-  transactionCount: number;
-  availableAccounts: Array<{ id: string; name: string; isDefault: boolean }>;
-}
 
 type DeleteStep =
   | "confirm"
@@ -54,14 +40,20 @@ type DeleteStep =
   | "confirm_delete_all"
   | "confirm_transfer";
 
+interface AccountWithBalance extends Account {
+  currentBalance: number;
+}
+
 export function AccountsList() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [selectedAccount, setSelectedAccount] =
+    useState<AccountWithBalance | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
-  const [deleteInfo, setDeleteInfo] = useState<DeleteInfo | null>(null);
+  const [accountToDelete, setAccountToDelete] =
+    useState<AccountWithBalance | null>(null);
+  const [deleteInfo, setDeleteInfo] = useState<DeleteAccountInfo | null>(null);
   const [deleteStep, setDeleteStep] = useState<DeleteStep>("confirm");
   const [transferTargetId, setTransferTargetId] = useState<string>("");
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -84,12 +76,12 @@ export function AccountsList() {
     }
   };
 
-  const handleEdit = (account: Account) => {
+  const handleEdit = (account: AccountWithBalance) => {
     setSelectedAccount(account);
     setEditDialogOpen(true);
   };
 
-  const handleDeleteClick = async (account: Account) => {
+  const handleDeleteClick = async (account: AccountWithBalance) => {
     setAccountToDelete(account);
     setDeleteStep("confirm");
     setDeleteInfo(null);
@@ -233,11 +225,6 @@ export function AccountsList() {
       </Card>
     );
   }
-
-  const totalBalance = accounts.reduce(
-    (sum, acc) => sum + acc.currentBalance,
-    0
-  );
 
   return (
     <>

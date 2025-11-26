@@ -36,18 +36,24 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import type {
+  Account,
+  Category,
+  Tag,
+  TransactionWithRelations,
+  VirtualOccurrence,
+} from "../types";
 
-interface Tag {
-  id: string;
-  name: string;
-}
+type EditableTransaction = (TransactionWithRelations | VirtualOccurrence) & {
+  editScope?: string;
+};
 
 interface TransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultType?: "income" | "expense";
   onSuccess?: () => void;
-  transaction?: any;
+  transaction?: EditableTransaction | null;
 }
 
 export function TransactionDialog({
@@ -59,17 +65,18 @@ export function TransactionDialog({
 }: TransactionDialogProps) {
   const isEditMode = !!transaction;
   // Verificar se é transação parcelada ou fixa (não pode mudar recorrência/data)
-  const isRecurringOrFixed =
+  const isRecurringOrFixed = Boolean(
     isEditMode &&
-    (transaction?.isFixed ||
-      (transaction?.installments && transaction?.installments > 1));
+      (transaction?.isFixed ||
+        (transaction?.installments && transaction?.installments > 1))
+  );
   const [type, setType] = useState<"income" | "expense">(defaultType);
   const [isRecurring, setIsRecurring] = useState(false);
   const [isFixed, setIsFixed] = useState(false);
   const [installments, setInstallments] = useState("");
   const [loading, setLoading] = useState(false);
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>("");
@@ -78,10 +85,10 @@ export function TransactionDialog({
 
   useEffect(() => {
     if (transaction) {
-      setType(transaction.type.toLowerCase());
+      setType(transaction.type.toLowerCase() as "income" | "expense");
       setIsFixed(transaction.isFixed || false);
       setInstallments(transaction.installments?.toString() || "");
-      setIsRecurring(transaction.installments > 1);
+      setIsRecurring((transaction.installments ?? 0) > 1);
       setSelectedAccount(transaction.accountId || "");
       setSelectedCategory(transaction.categoryId || "");
       setAmount(transaction.amount || 0);
@@ -93,6 +100,7 @@ export function TransactionDialog({
       }
     } else {
       // Reset quando abrir para criar novo
+      setType(defaultType);
       setIsFixed(false);
       setInstallments("");
       setIsRecurring(false);
@@ -101,7 +109,7 @@ export function TransactionDialog({
       setSelectedCategory("");
       setAmount(0);
     }
-  }, [transaction, open]);
+  }, [transaction, open, defaultType]);
 
   useEffect(() => {
     if (open) {
@@ -615,7 +623,7 @@ export function TransactionDialog({
               placeholder="Adicione informações extras sobre este lançamento..."
               className="resize-none"
               rows={3}
-              defaultValue={transaction?.notes}
+              defaultValue={transaction?.notes ?? ""}
             />
           </div>
 

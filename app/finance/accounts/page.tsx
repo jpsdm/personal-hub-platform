@@ -1,24 +1,25 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { AccountsList } from "@/components/finance/accounts-list"
-import { AccountDialog } from "@/components/finance/account-dialog"
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Button } from "@/components/ui/button";
+import { AccountDialog, AccountsList } from "@/modules/finance";
+import { Plus } from "lucide-react";
+import { useState } from "react";
 
 export default function AccountsPage() {
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleSuccess = () => {
-    setRefreshKey((prev) => prev + 1)
-  }
+    setRefreshKey((prev) => prev + 1);
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-foreground mb-2">Contas Bancárias</h2>
+          <h2 className="text-3xl font-bold text-foreground mb-2">
+            Contas Bancárias
+          </h2>
           <p className="text-muted-foreground">Gerencie suas contas e saldos</p>
         </div>
         <AccountDialog
@@ -35,5 +36,5 @@ export default function AccountsPage() {
       {/* Accounts List */}
       <AccountsList key={refreshKey} />
     </div>
-  )
+  );
 }
