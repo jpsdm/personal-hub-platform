@@ -18,9 +18,11 @@ import {
   GripVertical,
   Pencil,
   Play,
+  Square,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { getDescriptionPreview } from "./editor-js";
 
 interface TaskCardProps {
@@ -41,11 +43,45 @@ export function TaskCard({
   onStartPomodoro,
 }: TaskCardProps) {
   const descriptionPreview = getDescriptionPreview(task.description, 80);
+  const [pomodoroState, setPomodoroState] = useState<{
+    isRunning: boolean;
+    linkedTaskId: string | null;
+  }>({ isRunning: false, linkedTaskId: null });
+
+  // Listen for pomodoro state changes
+  useEffect(() => {
+    const handlePomodoroStateChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        isRunning: boolean;
+        linkedTaskId: string | null;
+      }>;
+      setPomodoroState(customEvent.detail);
+    };
+
+    window.addEventListener("pomodoroStateChange", handlePomodoroStateChange);
+
+    // Request current state on mount
+    window.dispatchEvent(new CustomEvent("requestPomodoroState"));
+
+    return () => {
+      window.removeEventListener(
+        "pomodoroStateChange",
+        handlePomodoroStateChange
+      );
+    };
+  }, []);
+
+  const isPomodoroRunningForThisTask =
+    pomodoroState.isRunning && pomodoroState.linkedTaskId === task.id;
 
   return (
     <Card
       className={`p-3 cursor-pointer hover:shadow-md transition-all group ${
         isDragging ? "opacity-50 rotate-3 shadow-lg" : ""
+      } ${
+        isPomodoroRunningForThisTask
+          ? "ring-2 ring-destructive ring-offset-2 ring-offset-background"
+          : ""
       }`}
       onClick={onClick}
     >
@@ -93,20 +129,34 @@ export function TaskCard({
             )}
           </div>
 
-          {/* Action buttons - show on hover */}
-          <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Action buttons - show on hover or when pomodoro is running for this task */}
+          <div
+            className={`flex items-center gap-1 mt-2 transition-opacity ${
+              isPomodoroRunningForThisTask
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-100"
+            }`}
+          >
             {onStartPomodoro && (
               <Button
-                variant="ghost"
+                variant={isPomodoroRunningForThisTask ? "destructive" : "ghost"}
                 size="icon"
                 className="h-7 w-7"
                 onClick={(e) => {
                   e.stopPropagation();
                   onStartPomodoro();
                 }}
-                title="Iniciar Pomodoro"
+                title={
+                  isPomodoroRunningForThisTask
+                    ? "Finalizar Pomodoro"
+                    : "Iniciar Pomodoro"
+                }
               >
-                <Play className="w-3.5 h-3.5" />
+                {isPomodoroRunningForThisTask ? (
+                  <Square className="w-3.5 h-3.5" />
+                ) : (
+                  <Play className="w-3.5 h-3.5" />
+                )}
               </Button>
             )}
             {onEdit && (

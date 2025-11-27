@@ -24,9 +24,11 @@ import {
   ExternalLink,
   Pencil,
   Play,
+  Square,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { EditorJSRenderer, parseDescription } from "./editor-js";
 
 interface TaskPreviewDialogProps {
@@ -48,9 +50,39 @@ export function TaskPreviewDialog({
   onDelete,
   onStartPomodoro,
 }: TaskPreviewDialogProps) {
+  const [pomodoroState, setPomodoroState] = useState<{
+    isRunning: boolean;
+    linkedTaskId: string | null;
+  }>({ isRunning: false, linkedTaskId: null });
+
+  // Listen for pomodoro state changes
+  useEffect(() => {
+    const handlePomodoroStateChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        isRunning: boolean;
+        linkedTaskId: string | null;
+      }>;
+      setPomodoroState(customEvent.detail);
+    };
+
+    window.addEventListener("pomodoroStateChange", handlePomodoroStateChange);
+
+    // Request current state on mount
+    window.dispatchEvent(new CustomEvent("requestPomodoroState"));
+
+    return () => {
+      window.removeEventListener(
+        "pomodoroStateChange",
+        handlePomodoroStateChange
+      );
+    };
+  }, []);
+
   if (!task) return null;
 
   const descriptionData = parseDescription(task.description);
+  const isPomodoroRunningForThisTask =
+    pomodoroState.isRunning && pomodoroState.linkedTaskId === task.id;
   console.log(task.pomodoroSessions);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -96,12 +128,21 @@ export function TaskPreviewDialog({
           {/* Action buttons */}
           <div className="flex items-center gap-2 mt-4">
             <Button
-              variant="default"
+              variant={isPomodoroRunningForThisTask ? "destructive" : "default"}
               size="sm"
               onClick={() => onStartPomodoro(task.id)}
             >
-              <Play className="w-4 h-4 mr-2" />
-              Iniciar Pomodoro
+              {isPomodoroRunningForThisTask ? (
+                <>
+                  <Square className="w-4 h-4 mr-2" />
+                  Finalizar Pomodoro
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Iniciar Pomodoro
+                </>
+              )}
             </Button>
             <Button variant="outline" size="sm" onClick={onEdit}>
               <Pencil className="w-4 h-4 mr-2" />

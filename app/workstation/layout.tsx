@@ -1,6 +1,16 @@
 "use client";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PomodoroTimer } from "@/modules/workstation/components/pomodoro-timer";
 import { usePomodoro } from "@/modules/workstation/hooks/use-pomodoro";
 import type { Task } from "@/modules/workstation/types";
@@ -8,7 +18,7 @@ import { BarChart3, Briefcase, Home, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const navigation = [
   { name: "Quadros", href: "/workstation", icon: LayoutGrid },
@@ -25,33 +35,114 @@ export default function WorkstationLayout({
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [switchTaskDialog, setSwitchTaskDialog] = useState<{
+    open: boolean;
+    newTaskId: string | null;
+    newTaskTitle: string;
+  }>({ open: false, newTaskId: null, newTaskTitle: "" });
 
   // Initialize pomodoro hook
   const pomodoro = usePomodoro(userId);
+
+  // Function to actually start pomodoro for a task
+  const startPomodoroForTask = useCallback(
+    async (taskId: string) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (task) {
+        pomodoro.linkTask(task);
+      }
+      try {
+        await pomodoro.startSession(taskId);
+      } catch (error) {
+        console.error("Error starting pomodoro:", error);
+      }
+    },
+    [tasks, pomodoro]
+  );
+
+  // Handle switching from one task to another
+  const handleSwitchTask = async () => {
+    if (switchTaskDialog.newTaskId) {
+      // Stop current session
+      await pomodoro.stopSession();
+      // Start new session
+      await startPomodoroForTask(switchTaskDialog.newTaskId);
+    }
+    setSwitchTaskDialog({ open: false, newTaskId: null, newTaskTitle: "" });
+  };
 
   // Listen for start pomodoro events from child components
   useEffect(() => {
     const handleStartPomodoro = async (event: Event) => {
       const customEvent = event as CustomEvent<{ taskId: string }>;
       const { taskId } = customEvent.detail;
-      // Find the task to link
-      const task = tasks.find((t) => t.id === taskId);
-      if (task) {
-        pomodoro.linkTask(task);
+
+      // If pomodoro is running and it's the same task, stop it
+      if (pomodoro.isRunning && pomodoro.linkedTask?.id === taskId) {
+        await pomodoro.stopSession();
+        return;
       }
-      // Start the session
-      try {
-        await pomodoro.startSession(taskId);
-      } catch (error) {
-        console.error("Error starting pomodoro:", error);
+
+      // If pomodoro is running for a different task, show confirmation dialog
+      if (pomodoro.isRunning && pomodoro.linkedTask?.id !== taskId) {
+        const newTask = tasks.find((t) => t.id === taskId);
+        setSwitchTaskDialog({
+          open: true,
+          newTaskId: taskId,
+          newTaskTitle: newTask?.title || "Nova tarefa",
+        });
+        return;
       }
+
+      // Otherwise, start the pomodoro
+      await startPomodoroForTask(taskId);
     };
 
     window.addEventListener("startPomodoro", handleStartPomodoro);
     return () => {
       window.removeEventListener("startPomodoro", handleStartPomodoro);
     };
-  }, [tasks, pomodoro]);
+  }, [tasks, pomodoro, startPomodoroForTask]);
+
+  // Expose pomodoro state to children via custom event
+  useEffect(() => {
+    const updatePomodoroState = () => {
+      window.dispatchEvent(
+        new CustomEvent("pomodoroStateChange", {
+          detail: {
+            isRunning: pomodoro.isRunning,
+            linkedTaskId: pomodoro.linkedTask?.id || null,
+          },
+        })
+      );
+    };
+
+    // Only emit after pomodoro is initialized
+    if (pomodoro.isInitialized) {
+      updatePomodoroState();
+    }
+  }, [pomodoro.isRunning, pomodoro.linkedTask, pomodoro.isInitialized]);
+
+  // Listen for state requests from child components
+  useEffect(() => {
+    const handleStateRequest = () => {
+      if (pomodoro.isInitialized) {
+        window.dispatchEvent(
+          new CustomEvent("pomodoroStateChange", {
+            detail: {
+              isRunning: pomodoro.isRunning,
+              linkedTaskId: pomodoro.linkedTask?.id || null,
+            },
+          })
+        );
+      }
+    };
+
+    window.addEventListener("requestPomodoroState", handleStateRequest);
+    return () => {
+      window.removeEventListener("requestPomodoroState", handleStateRequest);
+    };
+  }, [pomodoro.isRunning, pomodoro.linkedTask, pomodoro.isInitialized]);
 
   useEffect(() => {
     // Only run on client side
@@ -177,6 +268,37 @@ export default function WorkstationLayout({
         onLinkTask={pomodoro.linkTask}
         onResetToday={pomodoro.resetTodaySessions}
       />
+
+      {/* Switch Task Confirmation Dialog */}
+      <AlertDialog
+        open={switchTaskDialog.open}
+        onOpenChange={(open) =>
+          !open &&
+          setSwitchTaskDialog({
+            open: false,
+            newTaskId: null,
+            newTaskTitle: "",
+          })
+        }
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pomodoro em andamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você já tem um Pomodoro em andamento para &quot;
+              {pomodoro.linkedTask?.title || "uma tarefa"}&quot;. Deseja
+              encerrar o Pomodoro atual e iniciar um novo para &quot;
+              {switchTaskDialog.newTaskTitle}&quot;?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSwitchTask}>
+              Trocar Tarefa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
