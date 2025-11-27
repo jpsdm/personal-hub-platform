@@ -10,7 +10,7 @@ import {
 } from "@/modules/finance";
 import { Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 export interface TransactionFilters {
   startDate?: string;
@@ -24,7 +24,7 @@ export interface TransactionFilters {
   year?: string;
 }
 
-export default function TransactionsPage() {
+function TransactionsPageContent() {
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
@@ -147,5 +147,20 @@ export default function TransactionsPage() {
         onSuccess={handleSuccess}
       />
     </div>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <div className="h-24 bg-muted/50 animate-pulse rounded-lg" />
+          <div className="h-64 bg-muted/50 animate-pulse rounded-lg" />
+        </div>
+      }
+    >
+      <TransactionsPageContent />
+    </Suspense>
   );
 }
