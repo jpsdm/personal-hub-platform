@@ -16,6 +16,7 @@ model User {
   email        String   @unique
   password     String?  // Optional password for profile protection
   avatarColor  String   @default("#3B82F6") // Color for user avatar
+  timezone     String   @default("America/Sao_Paulo") // User timezone for date display
   openaiApiKey String?  // OpenAI API key for AI assistant
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -25,6 +26,12 @@ model User {
   tags            Tag[]
   transactions    Transaction[]
   recurringRules  RecurringRule[]
+  
+  // Workstation relations
+  kanbanBoards     KanbanBoard[]
+  tasks            Task[]
+  pomodoroSessions PomodoroSession[]
+  timeEntries      TimeEntry[]
 }
 
 model Account {
@@ -152,4 +159,109 @@ model RecurringRule {
   transactions Transaction[]
 
   @@index([userId])
+}
+
+// ==========================================
+// WORKSTATION MODULE
+// ==========================================
+
+model KanbanBoard {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  color       String   @default("#3B82F6")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  columns KanbanColumn[]
+  tasks   Task[]
+
+  @@index([userId])
+}
+
+model KanbanColumn {
+  id        String   @id @default(uuid())
+  boardId   String
+  name      String
+  color     String   @default("#6B7280")
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  board KanbanBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@index([boardId])
+  @@index([order])
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  userId      String
+  boardId     String
+  columnId    String
+  code        String    // Código de rastreio (ex: TASK-001)
+  title       String
+  description String?
+  priority    String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  dueDate     DateTime?
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  board           KanbanBoard       @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  column          KanbanColumn      @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  pomodoroSessions PomodoroSession[]
+  timeEntries     TimeEntry[]
+
+  @@unique([boardId, code])
+  @@index([userId])
+  @@index([boardId])
+  @@index([columnId])
+  @@index([order])
+}
+
+model PomodoroSession {
+  id          String    @id @default(uuid())
+  userId      String
+  taskId      String?   // Pode ser null se não estiver vinculado a uma task
+  startedAt   DateTime
+  endedAt     DateTime?
+  duration    Int       @default(0) // Duração em segundos
+  type        String    @default("WORK") // WORK, SHORT_BREAK, LONG_BREAK
+  status      String    @default("RUNNING") // RUNNING, PAUSED, COMPLETED, CANCELLED
+  pausedAt    DateTime? // Quando foi pausado
+  pausedTime  Int       @default(0) // Tempo total pausado em segundos
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([startedAt])
+  @@index([status])
+}
+
+model TimeEntry {
+  id          String   @id @default(uuid())
+  userId      String
+  taskId      String?
+  description String?
+  startedAt   DateTime
+  endedAt     DateTime
+  duration    Int      // Duração em segundos
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([startedAt])
 }

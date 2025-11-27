@@ -2,7 +2,6 @@
 
 import type React from "react";
 
-import { DashboardCharts } from "@/components/finance/dashboard-charts";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatCurrency } from "@/lib/finance-utils";
+import { DashboardCharts, formatCurrency } from "@/modules/finance";
 import {
   ArrowDownCircle,
   ArrowUpCircle,

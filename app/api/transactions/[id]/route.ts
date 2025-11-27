@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/user-session";
-import { isVirtualId, parseVirtualId } from "@/lib/virtual-transactions";
+import { isVirtualId, parseVirtualId } from "@/modules/finance";
 import type { Params } from "next/dist/server/request/params";
 import { NextResponse } from "next/server";
 
