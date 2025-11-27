@@ -4,13 +4,16 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { PomodoroTimer } from "@/modules/workstation/components/pomodoro-timer";
 import { usePomodoro } from "@/modules/workstation/hooks/use-pomodoro";
 import type { Task } from "@/modules/workstation/types";
-import { Briefcase, Home } from "lucide-react";
+import { BarChart3, Briefcase, Home, LayoutGrid } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect, useState } from "react";
 
-const navigation = [{ name: "Quadros", href: "/workstation" }];
+const navigation = [
+  { name: "Quadros", href: "/workstation", icon: LayoutGrid },
+  { name: "Métricas", href: "/workstation/metrics", icon: BarChart3 },
+];
 
 export default function WorkstationLayout({
   children,
@@ -18,6 +21,7 @@ export default function WorkstationLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -129,15 +133,27 @@ export default function WorkstationLayout({
       <nav className="border-b border-border bg-card/50">
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-1 overflow-x-auto">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors rounded-lg whitespace-nowrap"
-              >
-                {item.name}
-              </Link>
-            ))}
+            {navigation.map((item) => {
+              const isActive =
+                item.href === "/workstation"
+                  ? pathname === "/workstation"
+                  : pathname.startsWith(item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors rounded-lg whitespace-nowrap ${
+                    isActive
+                      ? "text-primary bg-primary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                  }`}
+                >
+                  {Icon && <Icon className="w-4 h-4" />}
+                  {item.name}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </nav>
