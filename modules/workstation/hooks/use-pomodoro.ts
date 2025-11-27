@@ -18,6 +18,7 @@ interface UsePomodoroReturn extends PomodoroTimerState {
   sessions: PomodoroSession[];
   todaySessions: PomodoroSession[];
   fetchSessions: () => Promise<void>;
+  isInitialized: boolean;
 }
 
 export function usePomodoro(userId: string | null): UsePomodoroReturn {
@@ -29,6 +30,7 @@ export function usePomodoro(userId: string | null): UsePomodoroReturn {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [linkedTask, setLinkedTask] = useState<Task | null>(null);
   const [sessions, setSessions] = useState<PomodoroSession[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch today's sessions
@@ -59,9 +61,27 @@ export function usePomodoro(userId: string | null): UsePomodoroReturn {
         const elapsed =
           Math.floor((now - startTime) / 1000) - runningSession.pausedTime;
         setElapsedSeconds(Math.max(0, elapsed));
+
+        // If session has a linked task, fetch it
+        if (runningSession.taskId) {
+          try {
+            const taskResponse = await fetch(
+              `/api/workstation/tasks/${runningSession.taskId}`
+            );
+            if (taskResponse.ok) {
+              const taskData = await taskResponse.json();
+              setLinkedTask(taskData);
+            }
+          } catch (err) {
+            console.error("Error fetching linked task:", err);
+          }
+        }
       }
+
+      setIsInitialized(true);
     } catch (err) {
       console.error("Error fetching sessions:", err);
+      setIsInitialized(true);
     }
   }, [userId]);
 
@@ -216,5 +236,6 @@ export function usePomodoro(userId: string | null): UsePomodoroReturn {
     resetTodaySessions,
     linkTask,
     fetchSessions,
+    isInitialized,
   };
 }

@@ -31,7 +31,15 @@ import type {
 import { PRIORITY_LABELS, PomodoroSession } from "@/modules/workstation/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Calendar, Clock, Pencil, Play, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  Pencil,
+  Play,
+  Square,
+  Trash2,
+} from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -71,6 +79,36 @@ export default function TaskExpandedViewPage() {
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pomodoroState, setPomodoroState] = useState<{
+    isRunning: boolean;
+    linkedTaskId: string | null;
+  }>({ isRunning: false, linkedTaskId: null });
+
+  // Listen for pomodoro state changes
+  useEffect(() => {
+    const handlePomodoroStateChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        isRunning: boolean;
+        linkedTaskId: string | null;
+      }>;
+      setPomodoroState(customEvent.detail);
+    };
+
+    window.addEventListener("pomodoroStateChange", handlePomodoroStateChange);
+
+    // Request current state on mount
+    window.dispatchEvent(new CustomEvent("requestPomodoroState"));
+
+    return () => {
+      window.removeEventListener(
+        "pomodoroStateChange",
+        handlePomodoroStateChange
+      );
+    };
+  }, []);
+
+  const isPomodoroRunningForThisTask =
+    pomodoroState.isRunning && pomodoroState.linkedTaskId === taskId;
 
   const fetchTask = useCallback(async () => {
     try {
@@ -242,9 +280,22 @@ export default function TaskExpandedViewPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-2 mt-4">
-            <Button variant="default" size="sm" onClick={handleStartPomodoro}>
-              <Play className="w-4 h-4 mr-2" />
-              Iniciar Pomodoro
+            <Button
+              variant={isPomodoroRunningForThisTask ? "destructive" : "default"}
+              size="sm"
+              onClick={handleStartPomodoro}
+            >
+              {isPomodoroRunningForThisTask ? (
+                <>
+                  <Square className="w-4 h-4 mr-2" />
+                  Finalizar Pomodoro
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Iniciar Pomodoro
+                </>
+              )}
             </Button>
             <Button
               variant="outline"
