@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getDateStringInTimezone, DEFAULT_TIMEZONE } from "@/lib/timezone";
 import { getCurrentUserId } from "@/lib/user-session";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -17,6 +18,13 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Get user's timezone
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { timezone: true },
+    });
+    const timezone = user?.timezone || DEFAULT_TIMEZONE;
 
     // Calculate date range based on period
     const now = new Date();
@@ -88,47 +96,50 @@ export async function GET(request: NextRequest) {
     // Calculate total focus time
     const totalFocusTime = sessions.reduce((acc, s) => acc + s.duration, 0);
 
-    // Group sessions by day for streak calculation and daily stats
+    // Group sessions by day using user's timezone
     const sessionsByDay: Record<string, typeof sessions> = {};
     sessions.forEach((session) => {
-      const dateKey = new Date(session.startedAt).toISOString().split("T")[0];
+      const dateKey = getDateStringInTimezone(session.startedAt, timezone);
       if (!sessionsByDay[dateKey]) {
         sessionsByDay[dateKey] = [];
       }
       sessionsByDay[dateKey].push(session);
     });
 
-    // Calculate daily focus hours for chart
+    // Calculate daily focus hours for chart using user's timezone
     const dailyFocusData: { date: string; hours: number; sessions: number }[] =
       [];
     const currentDate = new Date(startDate);
     while (currentDate <= now) {
-      const dateKey = currentDate.toISOString().split("T")[0];
+      const dateKey = getDateStringInTimezone(currentDate, timezone);
       const daySessions = sessionsByDay[dateKey] || [];
       const totalSeconds = daySessions.reduce((acc, s) => acc + s.duration, 0);
-      dailyFocusData.push({
-        date: dateKey,
-        hours: Math.round((totalSeconds / 3600) * 100) / 100,
-        sessions: daySessions.length,
-      });
+      
+      // Avoid duplicate entries for the same date
+      if (!dailyFocusData.some(d => d.date === dateKey)) {
+        dailyFocusData.push({
+          date: dateKey,
+          hours: Math.round((totalSeconds / 3600) * 100) / 100,
+          sessions: daySessions.length,
+        });
+      }
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
     // Calculate successful days (days with at least one completed pomodoro)
     const successfulDays = Object.keys(sessionsByDay).length;
 
-    // Calculate current streak
+    // Calculate current streak using user's timezone
     let currentStreak = 0;
-    const today = new Date().toISOString().split("T")[0];
-    const yesterday = new Date(Date.now() - 86400000)
-      .toISOString()
-      .split("T")[0];
+    const today = getDateStringInTimezone(new Date(), timezone);
+    const yesterdayDate = new Date(Date.now() - 86400000);
+    const yesterday = getDateStringInTimezone(yesterdayDate, timezone);
 
     // Check if today or yesterday has sessions to start counting
     if (sessionsByDay[today] || sessionsByDay[yesterday]) {
-      let checkDate = new Date(sessionsByDay[today] ? today : yesterday);
+      let checkDate = new Date(sessionsByDay[today] ? now : yesterdayDate);
       while (true) {
-        const dateKey = checkDate.toISOString().split("T")[0];
+        const dateKey = getDateStringInTimezone(checkDate, timezone);
         if (sessionsByDay[dateKey]) {
           currentStreak++;
           checkDate.setDate(checkDate.getDate() - 1);
@@ -138,7 +149,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Calculate longest streak (all time)
+    // Calculate longest streak (all time) using user's timezone
     const allTimeSessions = await prisma.pomodoroSession.findMany({
       where: {
         userId,
@@ -152,7 +163,7 @@ export async function GET(request: NextRequest) {
 
     const allDays = new Set<string>();
     allTimeSessions.forEach((s) => {
-      allDays.add(new Date(s.startedAt).toISOString().split("T")[0]);
+      allDays.add(getDateStringInTimezone(s.startedAt, timezone));
     });
 
     const sortedDays = Array.from(allDays).sort();
@@ -257,6 +268,7 @@ export async function GET(request: NextRequest) {
       dailyFocusData,
       byBoard: Object.values(byBoard).sort((a, b) => b.totalTime - a.totalTime),
       byTask: Object.values(byTask).sort((a, b) => b.totalTime - a.totalTime),
+      timezone, // Include timezone in response for client-side display
     });
   } catch (error) {
     console.error("Error fetching pomodoro stats:", error);

@@ -5,7 +5,7 @@ import type React from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Briefcase, LogOut, Wallet } from "lucide-react";
+import { Briefcase, LogOut, Settings, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -93,6 +93,12 @@ export default function HubPage() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <Button variant="outline" asChild>
+              <Link href="/profiles/edit">
+                <Settings className="w-4 h-4 mr-2" />
+                Editar Perfil
+              </Link>
+            </Button>
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
               Trocar Perfil
