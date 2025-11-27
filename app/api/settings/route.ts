@@ -17,7 +17,6 @@ export async function GET() {
         name: true,
         email: true,
         avatarColor: true,
-        openaiApiKey: true,
       },
     });
 
@@ -25,16 +24,7 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Mascarar a API key para exibição (mostrar apenas últimos 4 caracteres)
-    const maskedApiKey = user.openaiApiKey
-      ? `sk-...${user.openaiApiKey.slice(-4)}`
-      : null;
-
-    return NextResponse.json({
-      ...user,
-      openaiApiKey: maskedApiKey,
-      hasApiKey: !!user.openaiApiKey,
-    });
+    return NextResponse.json(user);
   } catch (error) {
     console.error("Error fetching settings:", error);
     return NextResponse.json(
@@ -53,18 +43,16 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { openaiApiKey } = body;
+    const { name, avatarColor } = body;
 
-    const updateData: { openaiApiKey?: string | null } = {};
+    const updateData: { name?: string; avatarColor?: string } = {};
 
-    // Se a apiKey foi fornecida e não é a versão mascarada, atualiza
-    if (openaiApiKey !== undefined) {
-      if (openaiApiKey === "" || openaiApiKey === null) {
-        updateData.openaiApiKey = null;
-      } else if (!openaiApiKey.startsWith("sk-...")) {
-        // Só atualiza se não for a versão mascarada
-        updateData.openaiApiKey = openaiApiKey;
-      }
+    if (name !== undefined) {
+      updateData.name = name;
+    }
+
+    if (avatarColor !== undefined) {
+      updateData.avatarColor = avatarColor;
     }
 
     const user = await prisma.user.update({
@@ -75,20 +63,10 @@ export async function PUT(request: Request) {
         name: true,
         email: true,
         avatarColor: true,
-        openaiApiKey: true,
       },
     });
 
-    // Mascarar a API key para exibição
-    const maskedApiKey = user.openaiApiKey
-      ? `sk-...${user.openaiApiKey.slice(-4)}`
-      : null;
-
-    return NextResponse.json({
-      ...user,
-      openaiApiKey: maskedApiKey,
-      hasApiKey: !!user.openaiApiKey,
-    });
+    return NextResponse.json(user);
   } catch (error) {
     console.error("Error updating settings:", error);
     return NextResponse.json(

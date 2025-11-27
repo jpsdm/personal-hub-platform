@@ -77,12 +77,12 @@ export function AiChat() {
 
   const isLoading = status === "submitted" || status === "streaming";
 
-  // Verificar se usuário tem API key configurada
+  // Verificar se a API está configurada (variável de ambiente no servidor)
   useEffect(() => {
     if (isOpen && hasApiKey === null) {
-      fetch("/api/settings")
+      fetch("/api/ai/status")
         .then((res) => res.json())
-        .then((data) => setHasApiKey(data.hasApiKey || false))
+        .then((data) => setHasApiKey(data.configured || false))
         .catch(() => setHasApiKey(false));
     }
   }, [isOpen, hasApiKey]);
@@ -214,8 +214,12 @@ export function AiChat() {
                           API Key não configurada
                         </p>
                         <p className="text-muted-foreground mt-1">
-                          Para usar o assistente, configure sua chave da OpenAI
-                          nas Configurações (ícone de engrenagem no header).
+                          Para usar o assistente, configure a variável de
+                          ambiente{" "}
+                          <code className="bg-muted px-1 rounded">
+                            OPENAI_API_KEY
+                          </code>{" "}
+                          no servidor.
                         </p>
                       </div>
                     </div>

@@ -10,6 +10,7 @@ interface EditorJSComponentProps {
   onChange?: (data: OutputData) => void;
   placeholder?: string;
   readOnly?: boolean;
+  disabled?: boolean;
   minHeight?: number;
 }
 
@@ -18,6 +19,7 @@ export function EditorJSComponent({
   onChange,
   placeholder = "Descreva os detalhes da tarefa...",
   readOnly = false,
+  disabled = false,
   minHeight = 200,
 }: EditorJSComponentProps) {
   const editorRef = useRef<EditorJS | null>(null);
@@ -25,11 +27,32 @@ export function EditorJSComponent({
   const initialDataRef = useRef(data);
   const onChangeRef = useRef(onChange);
   const isInitializing = useRef(false);
+  const lastRenderedTime = useRef<number | undefined>(data?.time);
 
   // Keep onChange ref updated
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+
+  // Update editor when data prop changes externally (e.g., from AI enhance)
+  useEffect(() => {
+    if (!editorRef.current || !data || !data.blocks) return;
+
+    const currentTime = data.time;
+
+    // Only render if the time is different from what we last rendered
+    // This handles external updates (AI enhance) while ignoring our own onChange updates
+    if (currentTime && currentTime !== lastRenderedTime.current) {
+      console.log("EditorJS: Rendering external data", {
+        currentTime,
+        lastRenderedTime: lastRenderedTime.current,
+      });
+      lastRenderedTime.current = currentTime;
+      editorRef.current.render(data).catch((err) => {
+        console.error("Error rendering EditorJS data:", err);
+      });
+    }
+  }, [data]);
 
   useEffect(() => {
     // Prevent double initialization (React StrictMode)
@@ -102,6 +125,9 @@ export function EditorJSComponent({
         onChange: async () => {
           if (onChangeRef.current && editorRef.current) {
             const outputData = await editorRef.current.save();
+            // Update lastRenderedTime to match what we're sending out
+            // This prevents the useEffect from re-rendering our own changes
+            lastRenderedTime.current = outputData.time;
             onChangeRef.current(outputData);
           }
         },
@@ -134,7 +160,7 @@ export function EditorJSComponent({
       ref={holderRef}
       className={`prose prose-sm dark:prose-invert max-w-none p-4 ${
         readOnly ? "bg-muted/30" : "bg-background min-h-[200px]"
-      }`}
+      } ${disabled ? "pointer-events-none opacity-50" : ""}`}
     />
   );
 }
