@@ -23,6 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/modules/workstation/lib/utils";
 import type {
@@ -36,10 +42,12 @@ import { PRIORITY_COLORS, PRIORITY_LABELS } from "@/modules/workstation/types";
 import type { OutputData } from "@editorjs/editorjs";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Clock, Trash2 } from "lucide-react";
+import { CalendarIcon, Clock, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   EditorJSComponent,
+  getDescriptionPreview,
   parseDescription,
   stringifyDescription,
 } from "./editor-js";
@@ -81,6 +89,7 @@ export function TaskDialog({
   );
   const [submitting, setSubmitting] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
 
   const isEditing = !!task;
 
@@ -108,6 +117,47 @@ export function TaskDialog({
     propColumnId,
     columns,
   ]);
+
+  const handleEnhanceDescription = async () => {
+    // Extrair texto da descrição atual
+    const currentText = getDescriptionPreview(
+      stringifyDescription(description),
+      10000
+    );
+
+    if (!currentText || currentText.trim().length === 0) {
+      toast.error("Digite algo na descrição antes de usar a IA");
+      return;
+    }
+
+    setEnhancing(true);
+    try {
+      const response = await fetch("/api/ai/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: currentText,
+          context: formData.title || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Erro ao processar");
+      }
+
+      const enhancedData = await response.json();
+      setDescription(enhancedData);
+      toast.success("Descrição aprimorada com IA!");
+    } catch (error) {
+      console.error("Error enhancing description:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao aprimorar descrição"
+      );
+    } finally {
+      setEnhancing(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!formData.title.trim() || !formData.columnId) return;
@@ -183,14 +233,49 @@ export function TaskDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <div className="min-h-[200px] border rounded-md overflow-hidden">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="description">Descrição</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary"
+                      onClick={handleEnhanceDescription}
+                      disabled={enhancing}
+                    >
+                      {enhancing ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                      {enhancing ? "Aprimorando..." : "Aprimorar com IA"}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Usa IA para melhorar e estruturar a descrição</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="min-h-[200px] border rounded-md overflow-hidden relative">
+              {enhancing && (
+                <div className="absolute inset-0 bg-background/80 z-10 flex items-center justify-center">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Aprimorando com IA...
+                  </div>
+                </div>
+              )}
               {open && (
                 <EditorJSComponent
                   key={task?.id || "new"}
                   data={description}
                   onChange={setDescription}
                   placeholder="Adicione detalhes da tarefa..."
+                  disabled={enhancing}
                 />
               )}
             </div>

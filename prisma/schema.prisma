@@ -17,7 +17,6 @@ model User {
   password     String?  // Optional password for profile protection
   avatarColor  String   @default("#3B82F6") // Color for user avatar
   timezone     String   @default("America/Sao_Paulo") // User timezone for date display
-  openaiApiKey String?  // OpenAI API key for AI assistant
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
