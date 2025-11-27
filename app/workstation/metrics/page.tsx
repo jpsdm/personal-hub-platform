@@ -373,14 +373,17 @@ export default function PomodoroMetricsPage() {
       </div>
 
       {/* Clear All Confirmation Dialog */}
-      <AlertDialog open={clearAllDialogOpen} onOpenChange={setClearAllDialogOpen}>
+      <AlertDialog
+        open={clearAllDialogOpen}
+        onOpenChange={setClearAllDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Limpar todos os registros</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir <strong>TODAS</strong> as sessões
-              de Pomodoro? Esta ação não pode ser desfeita e você perderá todo
-              o histórico de métricas.
+              de Pomodoro? Esta ação não pode ser desfeita e você perderá todo o
+              histórico de métricas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
