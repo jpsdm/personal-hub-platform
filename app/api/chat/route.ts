@@ -188,32 +188,35 @@ export async function POST(req: Request) {
       );
     }
 
-    // Buscar API key do usuário
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { openaiApiKey: true, name: true },
-    });
+    // Usar API key da variável de ambiente
+    const apiKey = process.env.OPENAI_API_KEY;
 
-    if (!user?.openaiApiKey) {
+    if (!apiKey) {
       return new Response(
         JSON.stringify({
           error:
-            "Chave da API OpenAI não configurada. Vá em Configurações para adicionar sua chave.",
+            "Chave da API OpenAI não configurada. Configure a variável de ambiente OPENAI_API_KEY.",
         }),
         { status: 400 }
       );
     }
 
+    // Buscar nome do usuário para personalização
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
     const { messages }: { messages: UIMessage[] } = await req.json();
 
-    // Criar cliente OpenAI com a API key do usuário
+    // Criar cliente OpenAI com a API key da variável de ambiente
     const openai = createOpenAI({
-      apiKey: user.openaiApiKey,
+      apiKey,
     });
 
     const result = streamText({
       model: openai("gpt-4o-mini"),
-      system: SYSTEM_PROMPT.replace("usuário", user.name || "usuário"),
+      system: SYSTEM_PROMPT.replace("usuário", user?.name || "usuário"),
       messages: convertToModelMessages(messages),
       stopWhen: stepCountIs(5),
       tools: {
