@@ -17,8 +17,9 @@ COPY . .
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN pnpm prisma generate
 
-# Build the application
+# Build the application with standalone output for Docker
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV STANDALONE=true
 RUN pnpm build
 
 # ---- Runner ----

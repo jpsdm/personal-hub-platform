@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getDateStringInTimezone, DEFAULT_TIMEZONE } from "@/lib/timezone";
+import { DEFAULT_TIMEZONE, getDateStringInTimezone } from "@/lib/timezone";
 import { getCurrentUserId } from "@/lib/user-session";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -114,9 +114,9 @@ export async function GET(request: NextRequest) {
       const dateKey = getDateStringInTimezone(currentDate, timezone);
       const daySessions = sessionsByDay[dateKey] || [];
       const totalSeconds = daySessions.reduce((acc, s) => acc + s.duration, 0);
-      
+
       // Avoid duplicate entries for the same date
-      if (!dailyFocusData.some(d => d.date === dateKey)) {
+      if (!dailyFocusData.some((d) => d.date === dateKey)) {
         dailyFocusData.push({
           date: dateKey,
           hours: Math.round((totalSeconds / 3600) * 100) / 100,
