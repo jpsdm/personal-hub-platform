@@ -106,6 +106,9 @@ export function InvestmentDialog({
     notes: "",
   });
 
+  // Estado separado para controlar o input de quantidade como string
+  const [quantityInput, setQuantityInput] = useState("");
+
   const [linkedTransaction, setLinkedTransaction] =
     useState<LinkedTransactionData>({
       createTransaction: false,
@@ -126,6 +129,7 @@ export function InvestmentDialog({
         date: format(new Date(), "yyyy-MM-dd"),
         notes: "",
       });
+      setQuantityInput("");
       setLinkedTransaction({
         createTransaction: false,
         categoryId: "",
@@ -495,16 +499,20 @@ export function InvestmentDialog({
             <Label htmlFor="quantity">Quantidade *</Label>
             <Input
               id="quantity"
-              type="number"
-              step="any"
-              min="0"
-              value={formData.quantity || ""}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  quantity: parseFloat(e.target.value) || 0,
-                }))
-              }
+              type="text"
+              inputMode="decimal"
+              value={quantityInput}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Permite string vazia, números e ponto decimal
+                if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                  setQuantityInput(value);
+                  setFormData((prev) => ({
+                    ...prev,
+                    quantity: value === "" ? 0 : parseFloat(value) || 0,
+                  }));
+                }
+              }}
               placeholder="0"
             />
           </div>

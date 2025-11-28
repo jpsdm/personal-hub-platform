@@ -88,6 +88,9 @@ export function InvestmentTransactionDialog({
     notes: "",
   });
 
+  // Estado separado para controlar o input de quantidade como string
+  const [quantityInput, setQuantityInput] = useState("");
+
   const [linkedTransaction, setLinkedTransaction] =
     useState<LinkedTransactionData>({
       createTransaction: false,
@@ -124,6 +127,7 @@ export function InvestmentTransactionDialog({
         date: format(new Date(), "yyyy-MM-dd"),
         notes: "",
       });
+      setQuantityInput("");
       setLinkedTransaction({
         createTransaction: false,
         categoryId: "",
@@ -384,17 +388,28 @@ export function InvestmentTransactionDialog({
             </Label>
             <Input
               id="quantity"
-              type="number"
-              step="any"
-              min="0"
-              max={formData.type === "SELL" ? investment.quantity : undefined}
-              value={formData.quantity || ""}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  quantity: parseFloat(e.target.value) || 0,
-                }))
-              }
+              type="text"
+              inputMode="decimal"
+              value={quantityInput}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Permite string vazia, números e ponto decimal
+                if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                  const numValue = value === "" ? 0 : parseFloat(value) || 0;
+                  // Validação de máximo para venda
+                  if (
+                    formData.type === "SELL" &&
+                    numValue > investment.quantity
+                  ) {
+                    return;
+                  }
+                  setQuantityInput(value);
+                  setFormData((prev) => ({
+                    ...prev,
+                    quantity: numValue,
+                  }));
+                }
+              }}
               placeholder="0"
             />
           </div>
