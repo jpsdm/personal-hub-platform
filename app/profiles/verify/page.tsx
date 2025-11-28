@@ -70,6 +70,26 @@ export default function VerifyPasswordPage() {
           }),
         )
         sessionStorage.removeItem("selectedProfileId")
+
+        // Also save user ID in a cookie so middleware can read it on API requests
+        try {
+          const cookieOptions = `path=/; max-age=${
+            60 * 60 * 24 * 30
+          }; samesite=Lax${
+            typeof window !== "undefined" && window.location.protocol === "https:"
+              ? "; Secure"
+              : ""
+          }`;
+          document.cookie = `currentUserId=${encodeURIComponent(
+            user.id
+          )}; ${cookieOptions}`;
+        } catch (e) {
+          console.warn("Failed to set cookie for currentUserId", e);
+        }
+
+        // Dispatch custom event to force sync in UserSessionProvider
+        window.dispatchEvent(new Event("userSessionChange"));
+
         router.push("/hub")
       }
     } catch (err) {
