@@ -349,6 +349,7 @@ export async function POST(request: Request) {
         dayOfMonth
       );
       transactionData.isFixed = false; // Parcelas não são fixas
+      transactionData.isRecurring = true; // Parcelas são recorrentes
     }
     // Se é transação fixa, configurar como tal
     else if (isFixed) {

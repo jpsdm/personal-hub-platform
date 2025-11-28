@@ -187,12 +187,13 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
   };
 
   const handleEdit = (transaction: VirtualOccurrence) => {
-    // Transações fixas ou parceladas (virtuais): pode editar individualmente ou em lote
+    // Transações fixas ou parceladas: deve ter installments > 1 ou ser fixa
+    // Não considerar parentId ou isVirtual sozinhos
     const isFixedOrInstallment =
       transaction.isFixed ||
-      (transaction.installments && transaction.installments > 1) ||
-      transaction.parentId ||
-      transaction.isVirtual;
+      (transaction.installments !== null &&
+        transaction.installments !== undefined &&
+        transaction.installments > 1);
 
     if (isFixedOrInstallment) {
       setScopeTransaction(transaction);
@@ -206,12 +207,13 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
   };
 
   const handleDeleteClick = (transaction: VirtualOccurrence) => {
-    // Transações fixas ou parceladas (virtuais): pode excluir individualmente ou em lote
+    // Transações fixas ou parceladas: deve ter installments > 1 ou ser fixa
+    // Não considerar parentId ou isVirtual sozinhos
     const isFixedOrInstallment =
       transaction.isFixed ||
-      (transaction.installments && transaction.installments > 1) ||
-      transaction.parentId ||
-      transaction.isVirtual;
+      (transaction.installments !== null &&
+        transaction.installments !== undefined &&
+        transaction.installments > 1);
 
     if (isFixedOrInstallment) {
       setScopeTransaction(transaction);

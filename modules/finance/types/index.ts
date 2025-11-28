@@ -255,3 +255,154 @@ export interface CategoryFormData {
 export interface TagFormData {
   name: string;
 }
+
+// ==========================================
+// INVESTMENTS
+// ==========================================
+
+export type AssetType =
+  | "STOCK"
+  | "FII"
+  | "CRYPTO"
+  | "ETF"
+  | "FIXED_INCOME"
+  | "FUND";
+export type InvestmentTransactionType =
+  | "BUY"
+  | "SELL"
+  | "DIVIDEND"
+  | "SPLIT"
+  | "BONUS";
+
+export interface Portfolio {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string | null;
+  color: string;
+  currency: string;
+  isDefault: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface Asset {
+  id: string;
+  symbol: string;
+  name: string;
+  type: AssetType;
+  exchange?: string | null;
+  sector?: string | null;
+  currency: string;
+  logoUrl?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface Investment {
+  id: string;
+  portfolioId: string;
+  assetId: string;
+  quantity: number;
+  averagePrice: number;
+  totalInvested: number;
+  notes?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface InvestmentTransaction {
+  id: string;
+  investmentId: string;
+  type: InvestmentTransactionType;
+  quantity: number;
+  price: number;
+  totalValue: number;
+  fees: number;
+  date: Date | string;
+  notes?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface AssetPriceHistory {
+  id: string;
+  assetId: string;
+  date: Date | string;
+  open?: number | null;
+  high?: number | null;
+  low?: number | null;
+  close: number;
+  volume?: number | null;
+  createdAt: Date | string;
+}
+
+// Investment with relations
+export interface InvestmentWithAsset extends Investment {
+  asset: Asset;
+}
+
+export interface PortfolioWithInvestments extends Portfolio {
+  investments: InvestmentWithAsset[];
+}
+
+// Market data types
+export interface MarketQuote {
+  symbol: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  high?: number;
+  low?: number;
+  volume?: number;
+  previousClose?: number;
+  updatedAt: Date | string;
+}
+
+export interface InvestmentWithQuote extends InvestmentWithAsset {
+  quote?: MarketQuote | null;
+  currentValue: number;
+  profitLoss: number;
+  profitLossPercent: number;
+}
+
+export interface PortfolioSummary {
+  portfolioId: string;
+  totalInvested: number;
+  currentValue: number;
+  profitLoss: number;
+  profitLossPercent: number;
+  assetsCount: number;
+}
+
+export interface ProfitLoss {
+  value: number;
+  percent: number;
+}
+
+// Form data
+export interface PortfolioFormData {
+  name: string;
+  description?: string;
+  color: string;
+  currency: string;
+  isDefault?: boolean;
+}
+
+export interface InvestmentFormData {
+  assetId: string;
+  quantity: number;
+  price: number;
+  fees?: number;
+  date: string;
+  notes?: string;
+}
+
+export interface InvestmentTransactionFormData {
+  type: InvestmentTransactionType;
+  quantity: number;
+  price: number;
+  fees?: number;
+  date: string;
+  notes?: string;
+}
