@@ -97,8 +97,10 @@ export const createTransactionSchema = z.object({
   isPaid: z
     .boolean()
     .optional()
-    .default(false)
-    .describe("Se a transação já foi paga/recebida"),
+    .default(true)
+    .describe(
+      "Se a transação já foi paga/recebida. Use false APENAS quando o usuário indicar claramente que é um pagamento FUTURO (ex: 'vou pagar amanhã', 'pagarei dia X', 'tenho que pagar depois'). Por padrão, considere como já paga."
+    ),
   notes: z
     .string()
     .optional()

@@ -31,6 +31,9 @@ model User {
   tasks            Task[]
   pomodoroSessions PomodoroSession[]
   timeEntries      TimeEntry[]
+  
+  // Investment relations
+  portfolios       Portfolio[]
 }
 
 model Account {
@@ -263,4 +266,102 @@ model TimeEntry {
   @@index([userId])
   @@index([taskId])
   @@index([startedAt])
+}
+
+// ==========================================
+// INVESTMENTS MODULE
+// ==========================================
+
+model Portfolio {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  color       String   @default("#3B82F6")
+  currency    String   @default("BRL")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  investments Investment[]
+
+  @@index([userId])
+}
+
+model Asset {
+  id          String   @id @default(uuid())
+  symbol      String   @unique    // Ex: "PETR4", "BTCUSD", "HGLG11"
+  name        String              // Ex: "Petrobras PN"
+  type        String              // STOCK, FII, CRYPTO, ETF, FIXED_INCOME, FUND
+  exchange    String?             // B3, NASDAQ, BINANCE, etc.
+  sector      String?             // Tecnologia, Financeiro, etc.
+  currency    String   @default("BRL")
+  logoUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  investments  Investment[]
+  priceHistory AssetPriceHistory[]
+
+  @@index([type])
+  @@index([symbol])
+}
+
+model Investment {
+  id            String    @id @default(uuid())
+  portfolioId   String
+  assetId       String
+  quantity      Float                // Quantidade de ativos
+  averagePrice  Float                // Preço médio de compra
+  totalInvested Float                // Total investido (quantity * averagePrice)
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  portfolio    Portfolio             @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  asset        Asset                 @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  transactions InvestmentTransaction[]
+
+  @@unique([portfolioId, assetId])  // Apenas um registro por ativo por carteira
+  @@index([portfolioId])
+  @@index([assetId])
+}
+
+model InvestmentTransaction {
+  id            String   @id @default(uuid())
+  investmentId  String
+  type          String              // BUY, SELL, DIVIDEND, SPLIT, BONUS
+  quantity      Float
+  price         Float               // Preço unitário na transação
+  totalValue    Float               // Valor total (quantity * price)
+  fees          Float    @default(0) // Taxas e corretagem
+  date          DateTime
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  investment Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+
+  @@index([investmentId])
+  @@index([date])
+  @@index([type])
+}
+
+model AssetPriceHistory {
+  id        String   @id @default(uuid())
+  assetId   String
+  date      DateTime @db.Date
+  open      Float?
+  high      Float?
+  low       Float?
+  close     Float
+  volume    Float?
+  createdAt DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, date])
+  @@index([assetId])
+  @@index([date])
 }

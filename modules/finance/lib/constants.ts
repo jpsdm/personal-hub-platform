@@ -267,3 +267,145 @@ export const API_ENDPOINTS = {
 // ==========================================
 
 export const VIRTUAL_ID_SEPARATOR = "::" as const;
+
+// ==========================================
+// INVESTMENT TYPES
+// ==========================================
+
+export const ASSET_TYPES = {
+  STOCK: "STOCK",
+  FII: "FII",
+  CRYPTO: "CRYPTO",
+  ETF: "ETF",
+  FIXED_INCOME: "FIXED_INCOME",
+  FUND: "FUND",
+} as const;
+
+export const ASSET_TYPE_LABELS = {
+  STOCK: "Ação",
+  FII: "FII",
+  CRYPTO: "Criptomoeda",
+  ETF: "ETF",
+  FIXED_INCOME: "Renda Fixa",
+  FUND: "Fundo",
+} as const;
+
+export const ASSET_TYPE_COLORS = {
+  STOCK: {
+    bg: "bg-blue-100 dark:bg-blue-900/30",
+    text: "text-blue-700 dark:text-blue-400",
+    border: "border-blue-200 dark:border-blue-800",
+    solid: "#3b82f6",
+  },
+  FII: {
+    bg: "bg-purple-100 dark:bg-purple-900/30",
+    text: "text-purple-700 dark:text-purple-400",
+    border: "border-purple-200 dark:border-purple-800",
+    solid: "#8b5cf6",
+  },
+  CRYPTO: {
+    bg: "bg-orange-100 dark:bg-orange-900/30",
+    text: "text-orange-700 dark:text-orange-400",
+    border: "border-orange-200 dark:border-orange-800",
+    solid: "#f97316",
+  },
+  ETF: {
+    bg: "bg-cyan-100 dark:bg-cyan-900/30",
+    text: "text-cyan-700 dark:text-cyan-400",
+    border: "border-cyan-200 dark:border-cyan-800",
+    solid: "#06b6d4",
+  },
+  FIXED_INCOME: {
+    bg: "bg-green-100 dark:bg-green-900/30",
+    text: "text-green-700 dark:text-green-400",
+    border: "border-green-200 dark:border-green-800",
+    solid: "#22c55e",
+  },
+  FUND: {
+    bg: "bg-pink-100 dark:bg-pink-900/30",
+    text: "text-pink-700 dark:text-pink-400",
+    border: "border-pink-200 dark:border-pink-800",
+    solid: "#ec4899",
+  },
+} as const;
+
+export const INVESTMENT_TRANSACTION_TYPES = {
+  BUY: "BUY",
+  SELL: "SELL",
+  DIVIDEND: "DIVIDEND",
+  SPLIT: "SPLIT",
+  BONUS: "BONUS",
+} as const;
+
+export const INVESTMENT_TRANSACTION_TYPE_LABELS = {
+  BUY: "Compra",
+  SELL: "Venda",
+  DIVIDEND: "Dividendo",
+  SPLIT: "Desdobramento",
+  BONUS: "Bonificação",
+} as const;
+
+export const INVESTMENT_TRANSACTION_TYPE_COLORS = {
+  BUY: {
+    bg: "bg-green-100 dark:bg-green-900/30",
+    text: "text-green-700 dark:text-green-400",
+  },
+  SELL: {
+    bg: "bg-red-100 dark:bg-red-900/30",
+    text: "text-red-700 dark:text-red-400",
+  },
+  DIVIDEND: {
+    bg: "bg-blue-100 dark:bg-blue-900/30",
+    text: "text-blue-700 dark:text-blue-400",
+  },
+  SPLIT: {
+    bg: "bg-purple-100 dark:bg-purple-900/30",
+    text: "text-purple-700 dark:text-purple-400",
+  },
+  BONUS: {
+    bg: "bg-orange-100 dark:bg-orange-900/30",
+    text: "text-orange-700 dark:text-orange-400",
+  },
+} as const;
+
+export const EXCHANGES = {
+  B3: "B3",
+  NASDAQ: "NASDAQ",
+  NYSE: "NYSE",
+  BINANCE: "BINANCE",
+  COINBASE: "COINBASE",
+} as const;
+
+export const EXCHANGE_LABELS = {
+  B3: "B3 (Brasil)",
+  NASDAQ: "NASDAQ",
+  NYSE: "NYSE",
+  BINANCE: "Binance",
+  COINBASE: "Coinbase",
+} as const;
+
+export const DEFAULT_PORTFOLIO_COLORS = [
+  "#3b82f6", // blue
+  "#8b5cf6", // violet
+  "#22c55e", // green
+  "#f97316", // orange
+  "#ec4899", // pink
+  "#06b6d4", // cyan
+  "#f59e0b", // amber
+  "#6366f1", // indigo
+] as const;
+
+// API endpoints for investments
+export const INVESTMENT_API_ENDPOINTS = {
+  PORTFOLIOS: "/api/investments/portfolios",
+  INVESTMENTS: "/api/investments",
+  TRANSACTIONS: "/api/investments/transactions",
+  QUOTES: "/api/investments/quotes",
+  ASSETS: "/api/investments/assets",
+} as const;
+
+// Market data refresh intervals (in ms)
+export const MARKET_REFRESH_INTERVALS = {
+  QUOTES: 30000, // 30 seconds
+  HISTORY: 300000, // 5 minutes
+} as const;

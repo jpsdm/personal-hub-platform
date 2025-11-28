@@ -24,6 +24,7 @@ async function main() {
     { name: "Compras", type: CategoryType.EXPENSE, color: "#3B82F6" },
     { name: "Serviços", type: CategoryType.EXPENSE, color: "#6366F1" },
     { name: "Viagens", type: CategoryType.EXPENSE, color: "#10B981" },
+    { name: "Investimentos", type: CategoryType.EXPENSE, color: "#14B8A6" },
     { name: "Outros", type: CategoryType.EXPENSE, color: "#6B7280" },
   ].map((c) => ({
     ...c,

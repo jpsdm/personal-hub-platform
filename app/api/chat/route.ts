@@ -5,9 +5,18 @@ import {
   executeCreateTransaction,
   executeGetAccountBalance,
   executeGetAccounts,
+  executeGetAssetQuote,
   executeGetCategories,
   executeGetFinancialSummary,
   executeGetInstallments,
+  executeGetInvestmentCapacity,
+  executeGetInvestmentPortfolios,
+  executeGetInvestmentPositions,
+  executeGetInvestmentRecommendations,
+  executeGetInvestmentSummary,
+  executeGetInvestmentTransactions,
+  executeGetMultipleQuotes,
+  executeGetPortfolioQuotes,
   executeGetTags,
   executeGetTransactions,
   executeGetTransactionsByCategory,
@@ -15,9 +24,18 @@ import {
   executeGetTransactionsByTag,
   executeMathOperation,
   getAccountBalanceSchema,
+  getAssetQuoteSchema,
   getCategoriesSchema,
   getFinancialSummarySchema,
   getInstallmentsSchema,
+  getInvestmentCapacitySchema,
+  getInvestmentPortfoliosSchema,
+  getInvestmentPositionsSchema,
+  getInvestmentRecommendationsSchema,
+  getInvestmentSummarySchema,
+  getInvestmentTransactionsSchema,
+  getMultipleQuotesSchema,
+  getPortfolioQuotesSchema,
   getTagsSchema,
   getTransactionsByCategorySchema,
   getTransactionsByMonthSchema,
@@ -58,12 +76,28 @@ Você é um assistente financeiro inteligente, seguro e amigável. Sua missão �
 💵 Formatação financeira
 - Sempre formate valores como: R$ X.XXX,XX
 - Nunca deixe valores sem moeda
+- Para variações positivas use 🟢 e para negativas use 🔴
 
 📊 Sobre dados financeiros
 Você pode:
 - Consultar: transações, categorias, contas, saldos, tags, resumos
 - Criar: receitas e despesas (únicas, parceladas ou fixas)
 - Analisar: gastos, padrões, evolução mensal, categorias, recorrências
+
+📈 Sobre investimentos
+Você pode:
+- Consultar: carteiras, ativos, posições, histórico de operações (compras, vendas, dividendos)
+- Analisar: performance, lucro/prejuízo, diversificação por tipo de ativo
+- Cotações: consultar preços em tempo real de ações (PETR4, VALE3), FIIs (HGLG11, MXRF11) e criptomoedas (BTC, ETH)
+- Recomendar: capacidade de investimento baseada no saldo disponível e despesas pendentes
+
+**Regras para investimentos:**
+1. Sempre mostre variação com indicador visual: 🟢 lucro/alta, 🔴 prejuízo/queda
+2. Para cotações, informe preço atual e variação do dia
+3. Nunca recomende ativos específicos - apenas análises gerais de diversificação
+4. Sempre considere o saldo disponível e despesas pendentes antes de sugerir aportes
+5. Lembre que criptomoedas têm alta volatilidade
+6. Inclua disclaimer em recomendações: "Não é recomendação de investimento"
 
 ❗ Regras fundamentais
 1. **Nunca faça cálculos manualmente** — qualquer operação matemática deve usar a ferramenta "calculate"
@@ -325,6 +359,84 @@ export async function POST(req: Request) {
             "Realiza operações matemáticas precisas. SEMPRE use esta ferramenta para qualquer cálculo: somas, subtrações, multiplicações, divisões, porcentagens, médias. NUNCA faça cálculos manualmente. Exemplos: somar despesas, calcular total, porcentagem de gastos, média mensal, etc.",
           inputSchema: mathOperationSchema,
           execute: async (params) => executeMathOperation(params),
+        }),
+
+        // ====== TOOLS DE INVESTIMENTOS ======
+
+        // Tool: Buscar portfolios de investimentos
+        getInvestmentPortfolios: tool({
+          description:
+            "Lista todos os portfolios de investimentos do usuário com resumo de valor total, custo total e rentabilidade.",
+          inputSchema: getInvestmentPortfoliosSchema,
+          execute: async () => executeGetInvestmentPortfolios(userId),
+        }),
+
+        // Tool: Resumo de investimentos
+        getInvestmentSummary: tool({
+          description:
+            "Retorna um resumo completo dos investimentos do usuário: valor total investido, valor atual, rentabilidade, distribuição por tipo de ativo e top performers.",
+          inputSchema: getInvestmentSummarySchema,
+          execute: async (params) =>
+            executeGetInvestmentSummary(userId, params),
+        }),
+
+        // Tool: Posições de investimentos
+        getInvestmentPositions: tool({
+          description:
+            "Lista todas as posições de investimentos de um portfolio específico ou de todos os portfolios. Retorna ativos, quantidade, preço médio, valor atual e rentabilidade.",
+          inputSchema: getInvestmentPositionsSchema,
+          execute: async (params) =>
+            executeGetInvestmentPositions(userId, params),
+        }),
+
+        // Tool: Transações de investimentos
+        getInvestmentTransactions: tool({
+          description:
+            "Lista as transações de investimentos (compras e vendas) de um portfolio ou ativo específico.",
+          inputSchema: getInvestmentTransactionsSchema,
+          execute: async (params) =>
+            executeGetInvestmentTransactions(userId, params),
+        }),
+
+        // Tool: Cotação de ativo
+        getAssetQuote: tool({
+          description:
+            "Busca a cotação em tempo real de um ativo específico (ação, FII, BDR, ETF ou criptomoeda). Retorna preço atual, variação do dia e outros dados de mercado.",
+          inputSchema: getAssetQuoteSchema,
+          execute: async (params) => executeGetAssetQuote(params),
+        }),
+
+        // Tool: Cotação de múltiplos ativos
+        getMultipleQuotes: tool({
+          description:
+            "Busca cotações em tempo real de múltiplos ativos de uma vez. Útil para comparar ativos ou atualizar lista de favoritos.",
+          inputSchema: getMultipleQuotesSchema,
+          execute: async (params) => executeGetMultipleQuotes(params),
+        }),
+
+        // Tool: Cotação do portfolio
+        getPortfolioQuotes: tool({
+          description:
+            "Busca as cotações atuais de todos os ativos de um portfolio e calcula o valor atualizado de cada posição.",
+          inputSchema: getPortfolioQuotesSchema,
+          execute: async (params) => executeGetPortfolioQuotes(userId, params),
+        }),
+
+        // Tool: Capacidade de investimento
+        getInvestmentCapacity: tool({
+          description:
+            "Calcula a capacidade de investimento do usuário considerando: saldo disponível, despesas pendentes, receitas pendentes e reserva de emergência sugerida.",
+          inputSchema: getInvestmentCapacitySchema,
+          execute: async () => executeGetInvestmentCapacity(userId),
+        }),
+
+        // Tool: Recomendações de investimento
+        getInvestmentRecommendations: tool({
+          description:
+            "Gera análises e recomendações personalizadas de investimento. Tipos: 'capacity' (capacidade de investir), 'diversification' (distribuição da carteira), 'performance' (melhores/piores ativos), 'opportunities' (oportunidades de mercado), 'full' (análise completa). NÃO recomenda ativos específicos.",
+          inputSchema: getInvestmentRecommendationsSchema,
+          execute: async (params) =>
+            executeGetInvestmentRecommendations(userId, params),
         }),
       },
     });
