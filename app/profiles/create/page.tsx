@@ -85,6 +85,9 @@ export default function CreateProfilePage() {
         console.warn("Failed to set cookie for currentUserId", e);
       }
 
+      // Dispatch custom event to force sync in UserSessionProvider
+      window.dispatchEvent(new Event("userSessionChange"));
+
       router.push("/hub");
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
