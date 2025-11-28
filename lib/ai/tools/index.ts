@@ -38,3 +38,31 @@ export {
 } from "./summary";
 
 export { executeMathOperation, mathOperationSchema } from "./math";
+
+// Investment Tools
+export {
+  executeGetInvestmentPortfolios,
+  executeGetInvestmentPositions,
+  executeGetInvestmentSummary,
+  executeGetInvestmentTransactions,
+  getInvestmentPortfoliosSchema,
+  getInvestmentPositionsSchema,
+  getInvestmentSummarySchema,
+  getInvestmentTransactionsSchema,
+} from "./investments";
+
+export {
+  executeGetAssetQuote,
+  executeGetMultipleQuotes,
+  executeGetPortfolioQuotes,
+  getAssetQuoteSchema,
+  getMultipleQuotesSchema,
+  getPortfolioQuotesSchema,
+} from "./investments-quotes";
+
+export {
+  executeGetInvestmentCapacity,
+  executeGetInvestmentRecommendations,
+  getInvestmentCapacitySchema,
+  getInvestmentRecommendationsSchema,
+} from "./investments-analysis";

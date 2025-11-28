@@ -1,5 +1,6 @@
 import { AiChat, SettingsDialog } from "@/modules/finance";
 import {
+  Briefcase,
   Building2,
   FolderOpen,
   Home,
@@ -14,6 +15,7 @@ import type React from "react";
 const navigation = [
   { name: "Dashboard", href: "/finance", icon: LayoutDashboard },
   { name: "Lançamentos", href: "/finance/transactions", icon: Receipt },
+  { name: "Investimentos", href: "/finance/investments", icon: Briefcase },
   { name: "Contas", href: "/finance/accounts", icon: Building2 },
   { name: "Categorias", href: "/finance/categories", icon: FolderOpen },
   { name: "Tags", href: "/finance/tags", icon: Tag },

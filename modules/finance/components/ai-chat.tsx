@@ -237,7 +237,7 @@ export function AiChat() {
                     <div className="flex flex-col max-w-[85%] items-start">
                       <div className="rounded-2xl px-4 py-2 bg-muted rounded-bl-md">
                         <MessageContent
-                          content={`Olá! 👋 Sou seu assistente financeiro com IA. Posso te ajudar a:\n\n• 📊 Analisar seus gastos e receitas\n• 💰 Verificar saldos das suas contas\n• 📈 Mostrar evolução ao longo dos meses\n• 🏷️ Buscar transações por categoria ou tag\n• 💡 Dar dicas personalizadas\n• ➕ Criar novas receitas e despesas\n\nComo posso te ajudar hoje?`}
+                          content={`Olá! 👋 Sou seu assistente financeiro com IA. Posso te ajudar a:\n\n• 📊 Analisar seus gastos e receitas\n• 💰 Verificar saldos das suas contas\n• 📈 Mostrar evolução ao longo dos meses\n• 🏷️ Buscar transações por categoria ou tag\n• ➕ Criar novas receitas e despesas\n• 📉 Consultar cotações de ações, FIIs e criptos\n• 💼 Analisar sua carteira de investimentos\n• 🎯 Calcular capacidade de investimento\n• 💡 Dar dicas personalizadas\n\nComo posso te ajudar hoje?`}
                         />
                       </div>
                       <span className="text-[10px] text-muted-foreground mt-1 px-1">

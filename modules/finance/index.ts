@@ -5,6 +5,12 @@ export { AiChat } from "./components/ai-chat";
 export { CategoriesList } from "./components/categories-list";
 export { CategoryDialog } from "./components/category-dialog";
 export { DashboardCharts } from "./components/dashboard-charts";
+export { InvestmentDialog } from "./components/investment-dialog";
+export { InvestmentList } from "./components/investment-list";
+export { InvestmentTransactionDialog } from "./components/investment-transaction-dialog";
+export { PortfolioCharts } from "./components/portfolio-charts";
+export { PortfolioDialog } from "./components/portfolio-dialog";
+export { PortfolioList } from "./components/portfolio-list";
 export { SettingsDialog } from "./components/settings-dialog";
 export { TagDialog } from "./components/tag-dialog";
 export { TagsList } from "./components/tags-list";
@@ -18,10 +24,21 @@ export { TransactionsList } from "./components/transactions-list";
 // Types
 export type {
   Account,
+  Asset,
   Category,
   DateRange,
   DeleteAccountInfo,
+  Investment,
+  InvestmentFormData,
+  InvestmentTransaction,
+  InvestmentTransactionFormData,
+  InvestmentWithAsset,
+  MarketQuote,
   MonthYear,
+  Portfolio,
+  PortfolioFormData,
+  PortfolioWithInvestments,
+  ProfitLoss,
   Tag,
   Transaction,
   TransactionStatus,
@@ -32,10 +49,20 @@ export type {
 // Constants
 export {
   API_ENDPOINTS,
+  ASSET_TYPES,
+  ASSET_TYPE_COLORS,
+  ASSET_TYPE_LABELS,
   CURRENCY,
   DEFAULTS,
   DEFAULT_CATEGORY_COLORS,
+  DEFAULT_PORTFOLIO_COLORS,
+  EXCHANGES,
+  INVESTMENT_API_ENDPOINTS,
+  INVESTMENT_TRANSACTION_TYPES,
+  INVESTMENT_TRANSACTION_TYPE_COLORS,
+  INVESTMENT_TRANSACTION_TYPE_LABELS,
   LIMITS,
+  MARKET_REFRESH_INTERVALS,
   MONTH_NAMES,
   MONTH_NAMES_SHORT,
   TRANSACTION_STATUS,
@@ -63,3 +90,13 @@ export {
   isVirtualId,
   parseVirtualId,
 } from "./lib/virtual-transactions";
+
+// Market API
+export {
+  calculateAveragePrice,
+  calculateProfitLoss,
+  detectAssetType,
+  getQuote,
+  getQuotes,
+  searchAssets,
+} from "./lib/market-api";
