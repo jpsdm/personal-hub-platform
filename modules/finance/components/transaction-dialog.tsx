@@ -35,7 +35,7 @@ import {
   Hash,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   Account,
   Category,
@@ -82,6 +82,8 @@ export function TransactionDialog({
   const [selectedAccount, setSelectedAccount] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [amount, setAmount] = useState<number>(0);
+  const continueAddingRef = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (transaction) {
@@ -210,8 +212,21 @@ export function TransactionDialog({
     }
   };
 
+  const resetForm = () => {
+    setType(defaultType);
+    setIsFixed(false);
+    setInstallments("");
+    setIsRecurring(false);
+    setSelectedTags([]);
+    setAmount(0);
+    // Manter conta e categoria selecionadas para facilitar o registro contínuo
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const continueAdding = continueAddingRef.current;
+    continueAddingRef.current = false;
+
     setLoading(true);
 
     const formData = new FormData(e.target as HTMLFormElement);
@@ -263,8 +278,24 @@ export function TransactionDialog({
 
       await response.json();
 
-      onOpenChange(false);
-      if (onSuccess) onSuccess();
+      if (continueAdding && !isEditMode) {
+        // Resetar o formulário para continuar registrando
+        resetForm();
+        // Limpar os campos do formulário manualmente
+        const form = e.target as HTMLFormElement;
+        form.reset();
+        // Restaurar a data para hoje
+        const dateInput = form.querySelector(
+          'input[name="date"]'
+        ) as HTMLInputElement;
+        if (dateInput) {
+          dateInput.value = new Date().toISOString().split("T")[0];
+        }
+        if (onSuccess) onSuccess();
+      } else {
+        onOpenChange(false);
+        if (onSuccess) onSuccess();
+      }
     } catch (error) {
       console.error("Error saving transaction:", error);
       alert("Erro ao salvar lançamento. Por favor, tente novamente.");
@@ -295,7 +326,7 @@ export function TransactionDialog({
             obrigatórios.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           {/* Tipo e Valor */}
           <div className="grid grid-cols-[140px_1fr] gap-4">
             <div className="space-y-2">
@@ -639,6 +670,26 @@ export function TransactionDialog({
             >
               Cancelar
             </Button>
+            {!isEditMode && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={loading || !selectedAccount || !selectedCategory}
+                onClick={() => {
+                  continueAddingRef.current = true;
+                  formRef.current?.requestSubmit();
+                }}
+              >
+                {loading ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    Salvando...
+                  </>
+                ) : (
+                  <>Salvar e Continuar</>
+                )}
+              </Button>
+            )}
             <Button
               type="submit"
               disabled={loading || !selectedAccount || !selectedCategory}
@@ -654,7 +705,7 @@ export function TransactionDialog({
                   Salvando...
                 </>
               ) : (
-                <>{isEditMode ? "💾 Atualizar" : "✅ Salvar"} Lançamento</>
+                <>{isEditMode ? "Atualizar" : "Salvar"}</>
               )}
             </Button>
           </div>
