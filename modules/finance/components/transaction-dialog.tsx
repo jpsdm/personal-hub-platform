@@ -35,7 +35,7 @@ import {
   Hash,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   Account,
   Category,
@@ -47,6 +47,20 @@ import type {
 type EditableTransaction = (TransactionWithRelations | VirtualOccurrence) & {
   editScope?: string;
 };
+
+interface TransactionSuggestion {
+  id: string;
+  description: string;
+  categoryId: string;
+  accountId: string;
+  amount: number;
+  type: string;
+  category: {
+    id: string;
+    name: string;
+    color: string;
+  } | null;
+}
 
 interface TransactionDialogProps {
   open: boolean;
@@ -82,6 +96,12 @@ export function TransactionDialog({
   const [selectedAccount, setSelectedAccount] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [amount, setAmount] = useState<number>(0);
+  const [description, setDescription] = useState<string>("");
+  const [suggestions, setSuggestions] = useState<TransactionSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const descriptionInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (transaction) {
@@ -92,6 +112,7 @@ export function TransactionDialog({
       setSelectedAccount(transaction.accountId || "");
       setSelectedCategory(transaction.categoryId || "");
       setAmount(transaction.amount || 0);
+      setDescription(transaction.description || "");
       // Carregar tags da transação
       if (transaction.tags && transaction.tags.length > 0) {
         setSelectedTags(transaction.tags.map((t: any) => t.tag?.id || t.tagId));
@@ -108,7 +129,10 @@ export function TransactionDialog({
       setSelectedAccount("");
       setSelectedCategory("");
       setAmount(0);
+      setDescription("");
     }
+    setSuggestions([]);
+    setShowSuggestions(false);
   }, [transaction, open, defaultType]);
 
   useEffect(() => {
@@ -148,6 +172,94 @@ export function TransactionDialog({
       console.error("Error fetching tags:", error);
     }
   };
+
+  const fetchSuggestions = useCallback(
+    async (query: string) => {
+      if (query.length < 2) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
+      try {
+        const params = new URLSearchParams({ query });
+        if (type) params.append("type", type.toUpperCase());
+
+        const res = await fetch(`/api/transactions/suggestions?${params}`);
+        const data = await res.json();
+        setSuggestions(data);
+        setShowSuggestions(data.length > 0);
+        setSelectedSuggestionIndex(-1);
+      } catch (error) {
+        console.error("Error fetching suggestions:", error);
+      }
+    },
+    [type]
+  );
+
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setDescription(value);
+    fetchSuggestions(value);
+  };
+
+  const handleSelectSuggestion = (suggestion: TransactionSuggestion) => {
+    setDescription(suggestion.description);
+    if (suggestion.categoryId) {
+      setSelectedCategory(suggestion.categoryId);
+    }
+    // Mudar o tipo se for diferente
+    if (suggestion.type) {
+      setType(suggestion.type.toLowerCase() as "income" | "expense");
+    }
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
+
+  const handleDescriptionKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setSelectedSuggestionIndex((prev) =>
+          prev < suggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setSelectedSuggestionIndex((prev) => (prev > 0 ? prev - 1 : -1));
+        break;
+      case "Enter":
+        if (selectedSuggestionIndex >= 0) {
+          e.preventDefault();
+          handleSelectSuggestion(suggestions[selectedSuggestionIndex]);
+        }
+        break;
+      case "Escape":
+        setShowSuggestions(false);
+        break;
+    }
+  };
+
+  // Fechar sugestões ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        descriptionInputRef.current &&
+        !descriptionInputRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const toggleTag = (tagId: string) => {
     setSelectedTags((prev) =>
@@ -228,7 +340,7 @@ export function TransactionDialog({
       accountId: selectedAccount,
       categoryId: selectedCategory,
       type: type.toUpperCase(),
-      description: formData.get("description"),
+      description: description,
       amount: amount,
       dueDate: dateToSend,
       status: formData.get("status")?.toString().toUpperCase() || "PAID",
@@ -338,20 +450,68 @@ export function TransactionDialog({
 
           <Separator />
 
-          {/* Descrição */}
-          <div className="space-y-2">
+          {/* Descrição com Autocomplete */}
+          <div className="space-y-2 relative">
             <Label htmlFor="description" className="flex items-center gap-1">
               <FileText className="w-3.5 h-3.5" />
               Descrição *
             </Label>
             <Input
+              ref={descriptionInputRef}
               id="description"
               name="description"
               placeholder="Ex: Salário do mês, Almoço, Conta de luz..."
-              defaultValue={transaction?.description}
+              value={description}
+              onChange={handleDescriptionChange}
+              onKeyDown={handleDescriptionKeyDown}
+              onFocus={() => {
+                if (suggestions.length > 0) setShowSuggestions(true);
+              }}
               required
               className="text-base"
+              autoComplete="off"
             />
+            {/* Sugestões dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div
+                ref={suggestionsRef}
+                className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-[200px] overflow-y-auto"
+              >
+                {suggestions.map((suggestion, index) => (
+                  <div
+                    key={suggestion.id}
+                    className={`flex items-center justify-between px-3 py-2 cursor-pointer transition-colors ${
+                      index === selectedSuggestionIndex
+                        ? "bg-accent text-accent-foreground"
+                        : "hover:bg-accent/50"
+                    }`}
+                    onClick={() => handleSelectSuggestion(suggestion)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="truncate font-medium">
+                        {suggestion.description}
+                      </span>
+                    </div>
+                    {suggestion.category && (
+                      <Badge
+                        variant="secondary"
+                        className="ml-2 shrink-0 text-xs"
+                        style={{
+                          backgroundColor: suggestion.category.color + "20",
+                          color: suggestion.category.color,
+                          borderColor: suggestion.category.color,
+                        }}
+                      >
+                        {suggestion.category.name}
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+                <div className="px-3 py-1.5 text-xs text-muted-foreground border-t bg-muted/30">
+                  💡 Selecione para preencher automaticamente
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Categoria e Conta */}
