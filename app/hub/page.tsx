@@ -168,7 +168,7 @@ export default function HubPage() {
             >
               João Pedro
             </a>{" "}
-            - 2024
+            - 2025
           </p>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { UpdateNotification } from "@/components/update-notification";
+import { VersionFooter } from "@/components/version-footer";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import type React from "react";
@@ -29,6 +30,7 @@ export default function RootLayout({
         >
           {children}
           <UpdateNotification />
+          <VersionFooter />
         </ThemeProvider>
       </body>
     </html>
