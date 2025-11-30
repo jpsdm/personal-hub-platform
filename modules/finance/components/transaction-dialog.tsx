@@ -103,6 +103,9 @@ export function TransactionDialog({
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [amount, setAmount] = useState<number>(0);
   const [description, setDescription] = useState<string>("");
+  const [dueDate, setDueDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
   const [suggestions, setSuggestions] = useState<TransactionSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
@@ -122,6 +125,11 @@ export function TransactionDialog({
       setSelectedCategory(transaction.categoryId || "");
       setAmount(transaction.amount || 0);
       setDescription(transaction.description || "");
+      setDueDate(
+        transaction.dueDate
+          ? new Date(transaction.dueDate).toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0]
+      );
       // Carregar tags da transação
       if (transaction.tags && transaction.tags.length > 0) {
         setSelectedTags(transaction.tags.map((t: any) => t.tag?.id || t.tagId));
@@ -142,11 +150,12 @@ export function TransactionDialog({
       setInstallments("");
       setIsRecurring(false);
       setSelectedTags([]);
-      setSelectedAccount("");
       setSelectedCategory("");
       setAmount(0);
       setDescription("");
+      setDueDate(new Date().toISOString().split("T")[0]);
       setShowMoreOptions(false);
+      // Conta será definida pelo fetchAccounts quando carregar
     }
     setSuggestions([]);
     setShowSuggestions(false);
@@ -165,6 +174,18 @@ export function TransactionDialog({
       const res = await fetch("/api/accounts");
       const data = await res.json();
       setAccounts(data);
+      // Se não está editando e não tem conta selecionada, selecionar a conta padrão
+      if (!transaction && !selectedAccount) {
+        const defaultAccount = data.find(
+          (acc: Account & { isDefault?: boolean }) => acc.isDefault
+        );
+        if (defaultAccount) {
+          setSelectedAccount(defaultAccount.id);
+        } else if (data.length > 0) {
+          // Se não há conta padrão, selecionar a primeira
+          setSelectedAccount(data[0].id);
+        }
+      }
     } catch (error) {
       console.error("Error fetching accounts:", error);
     }
@@ -339,14 +360,28 @@ export function TransactionDialog({
     }
   };
 
-  const resetForm = () => {
+  const getDefaultAccountId = () => {
+    const defaultAccount = accounts.find(
+      (acc: Account & { isDefault?: boolean }) => (acc as any).isDefault
+    );
+    return defaultAccount?.id || (accounts.length > 0 ? accounts[0].id : "");
+  };
+
+  const resetFormForContinue = () => {
     setType(defaultType);
     setIsFixed(false);
     setInstallments("");
     setIsRecurring(false);
     setSelectedTags([]);
     setAmount(0);
-    // Manter conta e categoria selecionadas para facilitar o registro contínuo
+    setDescription("");
+    setSelectedCategory("");
+    setDueDate(new Date().toISOString().split("T")[0]);
+    // Manter a conta selecionada (ou usar a padrão)
+    setSelectedAccount(getDefaultAccountId());
+    setShowMoreOptions(false);
+    setSuggestions([]);
+    setShowSuggestions(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -359,12 +394,11 @@ export function TransactionDialog({
     const formData = new FormData(e.target as HTMLFormElement);
 
     // Quando o campo de data está desabilitado (parcelada/fixa), usar a data original
-    const dateFromForm = formData.get("date");
-    const dateToSend =
-      dateFromForm ||
-      (transaction?.dueDate
+    const dateToSend = isRecurringOrFixed
+      ? transaction?.dueDate
         ? new Date(transaction.dueDate).toISOString().split("T")[0]
-        : new Date().toISOString().split("T")[0]);
+        : new Date().toISOString().split("T")[0]
+      : dueDate;
 
     const data: any = {
       accountId: selectedAccount,
@@ -407,17 +441,10 @@ export function TransactionDialog({
 
       if (continueAdding && !isEditMode) {
         // Resetar o formulário para continuar registrando
-        resetForm();
+        resetFormForContinue();
         // Limpar os campos do formulário manualmente
         const form = e.target as HTMLFormElement;
         form.reset();
-        // Restaurar a data para hoje
-        const dateInput = form.querySelector(
-          'input[name="date"]'
-        ) as HTMLInputElement;
-        if (dateInput) {
-          dateInput.value = new Date().toISOString().split("T")[0];
-        }
         if (onSuccess) onSuccess();
       } else {
         onOpenChange(false);
@@ -613,11 +640,8 @@ export function TransactionDialog({
                 id="date"
                 name="date"
                 type="date"
-                defaultValue={
-                  transaction?.dueDate
-                    ? new Date(transaction.dueDate).toISOString().split("T")[0]
-                    : new Date().toISOString().split("T")[0]
-                }
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
                 required
                 disabled={isRecurringOrFixed}
               />
