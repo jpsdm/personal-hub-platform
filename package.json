@@ -15,10 +15,11 @@
   "scripts": {
     "build": "next build",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
     "dev": "next dev",
+    "db:seed": "tsx prisma/seed.ts",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next start",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.72",
