@@ -5,6 +5,11 @@ import type React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import {
   Dialog,
@@ -29,6 +34,7 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   Calendar,
+  ChevronDown,
   CreditCard,
   DollarSign,
   FileText,
@@ -82,6 +88,7 @@ export function TransactionDialog({
   const [selectedAccount, setSelectedAccount] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [amount, setAmount] = useState<number>(0);
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
 
   useEffect(() => {
     if (transaction) {
@@ -98,6 +105,13 @@ export function TransactionDialog({
       } else {
         setSelectedTags([]);
       }
+      // Abrir mais opções se houver dados preenchidos
+      const hasExtraData =
+        transaction.isFixed ||
+        (transaction.installments && transaction.installments > 1) ||
+        (transaction.tags && transaction.tags.length > 0) ||
+        transaction.notes;
+      setShowMoreOptions(!!hasExtraData);
     } else {
       // Reset quando abrir para criar novo
       setType(defaultType);
@@ -108,6 +122,7 @@ export function TransactionDialog({
       setSelectedAccount("");
       setSelectedCategory("");
       setAmount(0);
+      setShowMoreOptions(false);
     }
   }, [transaction, open, defaultType]);
 
@@ -443,189 +458,220 @@ export function TransactionDialog({
 
           <Separator />
 
-          {/* Opções de Recorrência - Desabilitado no modo edição de parceladas/fixas */}
-          {isRecurringOrFixed ? (
-            <div className="space-y-4 bg-muted/50 p-4 rounded-lg opacity-60">
-              <h3 className="text-sm font-semibold">Opções de Recorrência</h3>
-              <div className="text-sm text-muted-foreground">
-                {transaction?.isFixed ? (
-                  <p>
-                    📌 Este é um lançamento <strong>fixo</strong> (mensal). Não
-                    é possível alterar o tipo de recorrência.
-                  </p>
-                ) : (
-                  <p>
-                    🔄 Este é um lançamento <strong>parcelado</strong> (
-                    {transaction?.currentInstallment || 1}/
-                    {transaction?.installments}). Não é possível alterar o
-                    número de parcelas.
-                  </p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4 bg-muted/50 p-4 rounded-lg">
-              <h3 className="text-sm font-semibold">Opções de Recorrência</h3>
-
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="recurring"
-                  checked={isRecurring}
-                  onCheckedChange={(checked) => {
-                    setIsRecurring(checked as boolean);
-                    if (!checked) {
-                      setInstallments("");
-                    }
-                  }}
-                  disabled={isFixed}
+          {/* Mais Opções - Seção Colapsável */}
+          <Collapsible open={showMoreOptions} onOpenChange={setShowMoreOptions}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-2 w-full text-left group"
+              >
+                <span className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                  Mais opções
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-blue-600 dark:text-blue-400 transition-transform duration-200 ${
+                    showMoreOptions ? "rotate-180" : ""
+                  }`}
                 />
-                <div className="flex-1">
-                  <Label
-                    htmlFor="recurring"
-                    className="cursor-pointer font-medium"
-                  >
-                    Lançamento parcelado
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Divide o valor em várias parcelas mensais
-                  </p>
-                </div>
-              </div>
+              </button>
+            </CollapsibleTrigger>
+            <p className="text-xs text-muted-foreground mt-1">
+              Adicionar tags, parcelamento, notas...
+            </p>
 
-              {isRecurring && (
-                <div className="ml-7 space-y-2">
-                  <Label htmlFor="installments">Número de Parcelas *</Label>
-                  <Input
-                    id="installments"
-                    name="installments"
-                    type="number"
-                    min="2"
-                    max="48"
-                    placeholder="Ex: 12"
-                    value={installments}
-                    onChange={(e) => setInstallments(e.target.value)}
-                    required
-                    className="max-w-[200px]"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    💡 Serão criadas <strong>{installments || "N"}</strong>{" "}
-                    parcelas mensais consecutivas
-                  </p>
+            <CollapsibleContent className="mt-4 space-y-6">
+              {/* Opções de Recorrência - Desabilitado no modo edição de parceladas/fixas */}
+              {isRecurringOrFixed ? (
+                <div className="space-y-4 bg-muted/50 p-4 rounded-lg opacity-60">
+                  <h3 className="text-sm font-semibold">
+                    Opções de Recorrência
+                  </h3>
+                  <div className="text-sm text-muted-foreground">
+                    {transaction?.isFixed ? (
+                      <p>
+                        📌 Este é um lançamento <strong>fixo</strong> (mensal).
+                        Não é possível alterar o tipo de recorrência.
+                      </p>
+                    ) : (
+                      <p>
+                        🔄 Este é um lançamento <strong>parcelado</strong> (
+                        {transaction?.currentInstallment || 1}/
+                        {transaction?.installments}). Não é possível alterar o
+                        número de parcelas.
+                      </p>
+                    )}
+                  </div>
                 </div>
-              )}
+              ) : (
+                <div className="space-y-4 bg-muted/50 p-4 rounded-lg">
+                  <h3 className="text-sm font-semibold">
+                    Opções de Recorrência
+                  </h3>
 
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="fixed"
-                  checked={isFixed}
-                  onCheckedChange={(checked) => {
-                    setIsFixed(checked as boolean);
-                    if (checked) {
-                      setIsRecurring(false);
-                      setInstallments("");
-                    }
-                  }}
-                  disabled={isRecurring}
-                />
-                <div className="flex-1">
-                  <Label htmlFor="fixed" className="cursor-pointer font-medium">
-                    Lançamento fixo (mensal)
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Aparece automaticamente todos os meses (ex: aluguel,
-                    salário)
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Tags */}
-          <div className="space-y-2">
-            <Label>Tags (opcional)</Label>
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <SearchableSelect
-                  value=""
-                  onValueChange={(tagId) => {
-                    if (!selectedTags.includes(tagId)) {
-                      setSelectedTags((prev) => [...prev, tagId]);
-                    }
-                  }}
-                  options={tags
-                    .filter((tag) => !selectedTags.includes(tag.id))
-                    .map((tag) => ({
-                      value: tag.id,
-                      label: tag.name,
-                    }))}
-                  placeholder="Adicionar tag..."
-                  emptyText="Nenhuma tag disponível"
-                  createText="Criar nova tag"
-                  onCreate={async (name) => {
-                    try {
-                      const response = await fetch("/api/tags", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name }),
-                      });
-                      if (!response.ok) throw new Error("Failed to create tag");
-                      const newTag = await response.json();
-                      setTags((prev) => [...prev, newTag]);
-                      // Não adicionar a selectedTags aqui!
-                      // O SearchableSelect já chama onValueChange(result.id) que adiciona a tag
-                      return { id: newTag.id, name: newTag.name };
-                    } catch (error) {
-                      console.error("Error creating tag:", error);
-                      return null;
-                    }
-                  }}
-                  className="flex-1"
-                />
-              </div>
-              <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-[50px] bg-background">
-                {selectedTags.length === 0 ? (
-                  <span className="text-sm text-muted-foreground">
-                    Nenhuma tag selecionada. Use o campo acima para adicionar ou
-                    criar tags.
-                  </span>
-                ) : (
-                  selectedTags.map((tagId) => {
-                    const tag = tags.find((t) => t.id === tagId);
-                    if (!tag) return null;
-                    return (
-                      <Badge
-                        key={tag.id}
-                        variant="default"
-                        className="bg-primary text-primary-foreground shadow-sm cursor-pointer hover:bg-primary/90"
-                        onClick={() => toggleTag(tag.id)}
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="recurring"
+                      checked={isRecurring}
+                      onCheckedChange={(checked) => {
+                        setIsRecurring(checked as boolean);
+                        if (!checked) {
+                          setInstallments("");
+                        }
+                      }}
+                      disabled={isFixed}
+                    />
+                    <div className="flex-1">
+                      <Label
+                        htmlFor="recurring"
+                        className="cursor-pointer font-medium"
                       >
-                        {tag.name}
-                        <X className="w-3 h-3 ml-1" />
-                      </Badge>
-                    );
-                  })
-                )}
-              </div>
-              {selectedTags.length > 0 && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  ✓ <strong>{selectedTags.length}</strong> tag(s) selecionada(s)
-                </p>
-              )}
-            </div>
-          </div>
+                        Lançamento parcelado
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Divide o valor em várias parcelas mensais
+                      </p>
+                    </div>
+                  </div>
 
-          {/* Observações */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Observações (opcional)</Label>
-            <Textarea
-              id="notes"
-              name="notes"
-              placeholder="Adicione informações extras sobre este lançamento..."
-              className="resize-none"
-              rows={3}
-              defaultValue={transaction?.notes ?? ""}
-            />
-          </div>
+                  {isRecurring && (
+                    <div className="ml-7 space-y-2">
+                      <Label htmlFor="installments">Número de Parcelas *</Label>
+                      <Input
+                        id="installments"
+                        name="installments"
+                        type="number"
+                        min="2"
+                        max="48"
+                        placeholder="Ex: 12"
+                        value={installments}
+                        onChange={(e) => setInstallments(e.target.value)}
+                        required
+                        className="max-w-[200px]"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        💡 Serão criadas <strong>{installments || "N"}</strong>{" "}
+                        parcelas mensais consecutivas
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="fixed"
+                      checked={isFixed}
+                      onCheckedChange={(checked) => {
+                        setIsFixed(checked as boolean);
+                        if (checked) {
+                          setIsRecurring(false);
+                          setInstallments("");
+                        }
+                      }}
+                      disabled={isRecurring}
+                    />
+                    <div className="flex-1">
+                      <Label
+                        htmlFor="fixed"
+                        className="cursor-pointer font-medium"
+                      >
+                        Lançamento fixo (mensal)
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Aparece automaticamente todos os meses (ex: aluguel,
+                        salário)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <Label>Tags (opcional)</Label>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <SearchableSelect
+                      value=""
+                      onValueChange={(tagId) => {
+                        if (!selectedTags.includes(tagId)) {
+                          setSelectedTags((prev) => [...prev, tagId]);
+                        }
+                      }}
+                      options={tags
+                        .filter((tag) => !selectedTags.includes(tag.id))
+                        .map((tag) => ({
+                          value: tag.id,
+                          label: tag.name,
+                        }))}
+                      placeholder="Adicionar tag..."
+                      emptyText="Nenhuma tag disponível"
+                      createText="Criar nova tag"
+                      onCreate={async (name) => {
+                        try {
+                          const response = await fetch("/api/tags", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ name }),
+                          });
+                          if (!response.ok)
+                            throw new Error("Failed to create tag");
+                          const newTag = await response.json();
+                          setTags((prev) => [...prev, newTag]);
+                          return { id: newTag.id, name: newTag.name };
+                        } catch (error) {
+                          console.error("Error creating tag:", error);
+                          return null;
+                        }
+                      }}
+                      className="flex-1"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-[50px] bg-background">
+                    {selectedTags.length === 0 ? (
+                      <span className="text-sm text-muted-foreground">
+                        Nenhuma tag selecionada. Use o campo acima para
+                        adicionar ou criar tags.
+                      </span>
+                    ) : (
+                      selectedTags.map((tagId) => {
+                        const tag = tags.find((t) => t.id === tagId);
+                        if (!tag) return null;
+                        return (
+                          <Badge
+                            key={tag.id}
+                            variant="default"
+                            className="bg-primary text-primary-foreground shadow-sm cursor-pointer hover:bg-primary/90"
+                            onClick={() => toggleTag(tag.id)}
+                          >
+                            {tag.name}
+                            <X className="w-3 h-3 ml-1" />
+                          </Badge>
+                        );
+                      })
+                    )}
+                  </div>
+                  {selectedTags.length > 0 && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      ✓ <strong>{selectedTags.length}</strong> tag(s)
+                      selecionada(s)
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Observações */}
+              <div className="space-y-2">
+                <Label htmlFor="notes">Observações (opcional)</Label>
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  placeholder="Adicione informações extras sobre este lançamento..."
+                  className="resize-none"
+                  rows={3}
+                  defaultValue={transaction?.notes ?? ""}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           <Separator />
 
