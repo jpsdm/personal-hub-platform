@@ -665,7 +665,9 @@ export function TransactionDialog({
                 <SelectContent>
                   <SelectItem value="paid">✅ Pago</SelectItem>
                   <SelectItem value="pending">⏳ Pendente</SelectItem>
-                  <SelectItem value="overdue">⚠️ Atrasado</SelectItem>
+                  <SelectItem value="overdue" disabled>
+                    ⚠️ Atrasado
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

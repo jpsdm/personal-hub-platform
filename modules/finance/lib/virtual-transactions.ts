@@ -20,7 +20,46 @@ import type {
   TransactionWithRelations,
   VirtualOccurrence,
 } from "../types";
-import { LIMITS, VIRTUAL_ID_SEPARATOR } from "./constants";
+import { LIMITS, TRANSACTION_STATUS, VIRTUAL_ID_SEPARATOR } from "./constants";
+
+// ==========================================
+// STATUS CALCULATION
+// ==========================================
+
+/**
+ * Calcula o status correto de uma transação baseado na data de vencimento
+ * Se a data de vencimento passou e não está paga, é OVERDUE
+ */
+function calculateVirtualStatus(
+  dueDate: Date,
+  isPaid: boolean
+): TransactionStatus {
+  if (isPaid) {
+    return TRANSACTION_STATUS.PAID;
+  }
+
+  const today = new Date();
+  today.setUTCHours(23, 59, 59, 999); // Final do dia atual em UTC
+
+  // Comparar apenas as datas (ignorando horas)
+  const dueDateOnly = new Date(
+    Date.UTC(
+      dueDate.getUTCFullYear(),
+      dueDate.getUTCMonth(),
+      dueDate.getUTCDate(),
+      23,
+      59,
+      59,
+      999
+    )
+  );
+
+  if (dueDateOnly < today) {
+    return TRANSACTION_STATUS.OVERDUE;
+  }
+
+  return TRANSACTION_STATUS.PENDING;
+}
 
 // ==========================================
 // VIRTUAL ID MANAGEMENT
@@ -126,6 +165,12 @@ export function expandTransaction(
   if (!transaction.isFixed && !transaction.installments) {
     const dueDate = new Date(transaction.dueDate);
     if (isDateInRange(dueDate, rangeStart, rangeEnd)) {
+      // Recalcular status para garantir que transações atrasadas sejam marcadas como OVERDUE
+      const isPaid =
+        transaction.status === TRANSACTION_STATUS.PAID ||
+        !!transaction.paidDate;
+      const calculatedStatus = calculateVirtualStatus(dueDate, isPaid);
+
       occurrences.push({
         id: transaction.id,
         realId: transaction.id,
@@ -138,7 +183,7 @@ export function expandTransaction(
         amount: transaction.amount,
         dueDate: dueDate,
         paidDate: transaction.paidDate ? new Date(transaction.paidDate) : null,
-        status: transaction.status as TransactionStatus,
+        status: calculatedStatus,
         notes: transaction.notes || null,
         isFixed: false,
         installments: null,
@@ -204,7 +249,15 @@ export function expandTransaction(
         const override = overrides.get(occurrenceKey);
 
         if (override) {
-          // Usar dados do override
+          // Usar dados do override, mas recalcular status se não estiver pago
+          const overrideDueDate = new Date(override.dueDate);
+          const isPaid =
+            override.status === TRANSACTION_STATUS.PAID || !!override.paidDate;
+          const calculatedStatus = calculateVirtualStatus(
+            overrideDueDate,
+            isPaid
+          );
+
           occurrences.push({
             id: override.id,
             realId: override.id,
@@ -215,9 +268,9 @@ export function expandTransaction(
             type: override.type as "INCOME" | "EXPENSE",
             description: override.description,
             amount: override.amount,
-            dueDate: new Date(override.dueDate),
+            dueDate: overrideDueDate,
             paidDate: override.paidDate ? new Date(override.paidDate) : null,
-            status: override.status as TransactionStatus,
+            status: calculatedStatus,
             notes: override.notes || null,
             isFixed: transaction.isFixed,
             installments: transaction.installments || null,
@@ -230,6 +283,9 @@ export function expandTransaction(
           });
         } else {
           // Gerar ocorrência virtual
+          // Calcular o status correto baseado na data de vencimento
+          const virtualStatus = calculateVirtualStatus(occurrenceDate, false);
+
           occurrences.push({
             id: generateVirtualId(transaction.id, currentYear, currentMonth),
             realId: null,
@@ -242,7 +298,7 @@ export function expandTransaction(
             amount: transaction.amount,
             dueDate: occurrenceDate,
             paidDate: null, // Ocorrências virtuais começam sem data de pagamento
-            status: occurrenceDate < new Date() ? "PENDING" : "PENDING",
+            status: virtualStatus,
             notes: transaction.notes || null,
             isFixed: transaction.isFixed,
             installments: transaction.installments || null,

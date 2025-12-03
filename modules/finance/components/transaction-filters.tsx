@@ -13,7 +13,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import {
+  AlertTriangle,
   ArrowDownCircle,
   ArrowUpCircle,
   Calendar,
@@ -37,6 +39,7 @@ export interface TransactionFiltersState {
   categoryId?: string;
   accountId?: string;
   tagId?: string;
+  includeOverdue?: boolean;
 }
 
 interface TransactionFiltersProps {
@@ -54,6 +57,7 @@ export function TransactionFilters({
   const [categoryId, setCategoryId] = useState("");
   const [accountId, setAccountId] = useState("");
   const [tagId, setTagId] = useState("");
+  const [includeOverdue, setIncludeOverdue] = useState(false);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -112,6 +116,7 @@ export function TransactionFilters({
     if (categoryId) filters.categoryId = categoryId;
     if (accountId) filters.accountId = accountId;
     if (tagId) filters.tagId = tagId;
+    if (includeOverdue) filters.includeOverdue = includeOverdue;
 
     const hasFilters =
       startDate ||
@@ -120,7 +125,8 @@ export function TransactionFilters({
       status !== "all" ||
       categoryId ||
       accountId ||
-      tagId;
+      tagId ||
+      includeOverdue;
     setHasActiveFilters(!!hasFilters);
 
     onFiltersChange(filters);
@@ -134,6 +140,7 @@ export function TransactionFilters({
     setCategoryId("");
     setAccountId("");
     setTagId("");
+    setIncludeOverdue(false);
     setHasActiveFilters(false);
     onFiltersChange({});
   };
@@ -142,7 +149,16 @@ export function TransactionFilters({
   useEffect(() => {
     applyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, type, status, categoryId, accountId, tagId]);
+  }, [
+    startDate,
+    endDate,
+    type,
+    status,
+    categoryId,
+    accountId,
+    tagId,
+    includeOverdue,
+  ]);
 
   return (
     <Card className="p-4">
@@ -372,6 +388,35 @@ export function TransactionFilters({
                   emptyText="Nenhuma tag encontrada"
                 />
               </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Incluir Atrasadas */}
+          <div>
+            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+              Opções Avançadas
+            </h4>
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+              <div className="space-y-0.5">
+                <Label
+                  htmlFor="includeOverdue"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Incluir Atrasadas
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Mostra transações atrasadas de meses anteriores junto com o
+                  período selecionado
+                </p>
+              </div>
+              <Switch
+                id="includeOverdue"
+                checked={includeOverdue}
+                onCheckedChange={setIncludeOverdue}
+              />
             </div>
           </div>
         </div>
