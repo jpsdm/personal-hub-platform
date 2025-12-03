@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   ArrowDownCircle,
   ArrowUpCircle,
+  Banknote,
   Calendar,
   CheckCircle2,
   Clock,
@@ -31,6 +32,8 @@ import {
 import { useEffect, useState } from "react";
 import type { Account, Category, Tag as TagType } from "../types";
 
+const CASH_FLOW_MODE_KEY = "finance-cash-flow-mode";
+
 export interface TransactionFiltersState {
   startDate?: string;
   endDate?: string;
@@ -40,6 +43,7 @@ export interface TransactionFiltersState {
   accountId?: string;
   tagId?: string;
   includeOverdue?: boolean;
+  cashFlowMode?: boolean; // true = Financeiro Real (por paidDate), false = Competência Contábil (por dueDate)
 }
 
 interface TransactionFiltersProps {
@@ -58,6 +62,24 @@ export function TransactionFilters({
   const [accountId, setAccountId] = useState("");
   const [tagId, setTagId] = useState("");
   const [includeOverdue, setIncludeOverdue] = useState(false);
+  const [cashFlowMode, setCashFlowMode] = useState(true); // Default: Financeiro Real
+  const [cashFlowModeLoaded, setCashFlowModeLoaded] = useState(false);
+
+  // Carregar cashFlowMode do localStorage na inicialização
+  useEffect(() => {
+    const stored = localStorage.getItem(CASH_FLOW_MODE_KEY);
+    if (stored !== null) {
+      setCashFlowMode(stored === "true");
+    }
+    setCashFlowModeLoaded(true);
+  }, []);
+
+  // Persistir cashFlowMode no localStorage quando mudar
+  useEffect(() => {
+    if (cashFlowModeLoaded) {
+      localStorage.setItem(CASH_FLOW_MODE_KEY, String(cashFlowMode));
+    }
+  }, [cashFlowMode, cashFlowModeLoaded]);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -117,6 +139,7 @@ export function TransactionFilters({
     if (accountId) filters.accountId = accountId;
     if (tagId) filters.tagId = tagId;
     if (includeOverdue) filters.includeOverdue = includeOverdue;
+    filters.cashFlowMode = cashFlowMode; // Sempre incluir
 
     const hasFilters =
       startDate ||
@@ -147,7 +170,9 @@ export function TransactionFilters({
 
   // Auto-apply filters when any value changes
   useEffect(() => {
-    applyFilters();
+    if (cashFlowModeLoaded) {
+      applyFilters();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     startDate,
@@ -158,6 +183,8 @@ export function TransactionFilters({
     accountId,
     tagId,
     includeOverdue,
+    cashFlowMode,
+    cashFlowModeLoaded,
   ]);
 
   return (
@@ -388,6 +415,36 @@ export function TransactionFilters({
                   emptyText="Nenhuma tag encontrada"
                 />
               </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Modo de Visualização Financeira */}
+          <div>
+            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+              <Banknote className="w-4 h-4 text-muted-foreground" />
+              Modo de Visualização
+            </h4>
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+              <div className="space-y-0.5">
+                <Label
+                  htmlFor="cashFlowMode"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  {cashFlowMode ? "Financeiro Real" : "Competência Contábil"}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {cashFlowMode
+                    ? "Mostra transações pela data de pagamento efetivo (fluxo de caixa)"
+                    : "Mostra transações pela data de vencimento (regime de competência)"}
+                </p>
+              </div>
+              <Switch
+                id="cashFlowMode"
+                checked={cashFlowMode}
+                onCheckedChange={setCashFlowMode}
+              />
             </div>
           </div>
 

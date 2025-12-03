@@ -60,6 +60,7 @@ interface TransactionsListProps {
     month?: string;
     year?: string;
     includeOverdue?: boolean;
+    cashFlowMode?: boolean;
   };
 }
 
@@ -176,6 +177,8 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
       if (filters.year) params.append("year", filters.year);
       if (filters.includeOverdue)
         params.append("includeOverdue", String(filters.includeOverdue));
+      if (filters.cashFlowMode !== undefined)
+        params.append("cashFlowMode", String(filters.cashFlowMode));
 
       const response = await fetch(`/api/transactions?${params.toString()}`);
       if (response.ok) {

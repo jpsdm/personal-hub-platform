@@ -59,6 +59,7 @@ export async function GET(request: Request) {
     const tagId = searchParams.get("tagId");
     const includeVirtual = searchParams.get("includeVirtual") !== "false"; // Default true
     const includeOverdue = searchParams.get("includeOverdue") === "true"; // Default false
+    const cashFlowMode = searchParams.get("cashFlowMode") !== "false"; // Default true (Financeiro Real)
 
     // Determinar se há filtro de data
     const hasDateFilter = !!(startDate || endDate) || !!(month && year);
@@ -293,6 +294,157 @@ export async function GET(request: Request) {
     // Aplicar filtro de status após expansão (pois status pode vir de override)
     if (status) {
       results = results.filter((tx) => tx.status === status);
+    }
+
+    // Modo Financeiro Real: Filtrar e buscar transações pelo paidDate
+    if (cashFlowMode && hasDateFilter && rangeStart && rangeEnd) {
+      // No modo financeiro real:
+      // - Transações PAGAS: aparecem no período do paidDate
+      // - Transações PENDENTES/OVERDUE: aparecem no período do dueDate
+      
+      // Filtrar resultados existentes
+      results = results.filter((tx) => {
+        if (tx.status === "PAID" && tx.paidDate) {
+          // Transação paga: verificar se paidDate está no range
+          const paidDate = new Date(tx.paidDate);
+          return paidDate >= rangeStart && paidDate <= rangeEnd;
+        } else {
+          // Transação pendente/atrasada: verificar se dueDate está no range
+          const dueDate = new Date(tx.dueDate);
+          return dueDate >= rangeStart && dueDate <= rangeEnd;
+        }
+      });
+
+      // Buscar transações pagas no período atual mas com dueDate em meses anteriores
+      // (transações que "pertenciam" a outros meses mas foram pagas neste)
+      const paidInRangeWhere: any = {
+        userId,
+        isOverride: false,
+        status: "PAID",
+        paidDate: {
+          gte: rangeStart,
+          lte: rangeEnd,
+        },
+        // dueDate fora do range (para não duplicar)
+        dueDate: {
+          lt: rangeStart,
+        },
+      };
+
+      // Aplicar os mesmos filtros
+      if (type) paidInRangeWhere.type = type;
+      if (categoryId) paidInRangeWhere.categoryId = categoryId;
+      if (accountId) paidInRangeWhere.accountId = accountId;
+      if (tagId) {
+        paidInRangeWhere.tags = { some: { tagId } };
+      }
+
+      const paidInRange = await prisma.transaction.findMany({
+        where: paidInRangeWhere,
+        include: {
+          account: true,
+          category: true,
+          tags: {
+            include: {
+              tag: true,
+            },
+          },
+        },
+      });
+
+      // Buscar também overrides pagos no período com dueDate em meses anteriores
+      const paidOverridesWhere: any = {
+        userId,
+        isOverride: true,
+        status: "PAID",
+        paidDate: {
+          gte: rangeStart,
+          lte: rangeEnd,
+        },
+        overrideForDate: {
+          lt: rangeStart,
+        },
+      };
+
+      if (type) paidOverridesWhere.type = type;
+      if (categoryId) paidOverridesWhere.categoryId = categoryId;
+      if (accountId) paidOverridesWhere.accountId = accountId;
+      if (tagId) {
+        paidOverridesWhere.tags = { some: { tagId } };
+      }
+
+      const paidOverrides = await prisma.transaction.findMany({
+        where: paidOverridesWhere,
+        include: {
+          account: true,
+          category: true,
+          tags: {
+            include: {
+              tag: true,
+            },
+          },
+        },
+      });
+
+      // Converter e adicionar aos resultados
+      const additionalPaid: VirtualOccurrence[] = [
+        ...paidInRange.map((tx) => ({
+          id: tx.id,
+          realId: tx.id,
+          parentId: tx.id,
+          userId: tx.userId,
+          accountId: tx.accountId,
+          categoryId: tx.categoryId,
+          type: tx.type as "INCOME" | "EXPENSE",
+          description: tx.description,
+          amount: tx.amount,
+          dueDate: new Date(tx.dueDate),
+          paidDate: tx.paidDate ? new Date(tx.paidDate) : null,
+          status: "PAID" as const,
+          notes: tx.notes,
+          isFixed: tx.isFixed,
+          installments: tx.installments,
+          currentInstallment: null,
+          isVirtual: false,
+          isOverride: false,
+          account: tx.account,
+          category: tx.category,
+          tags: tx.tags,
+        })),
+        ...paidOverrides.map((tx) => ({
+          id: tx.id,
+          realId: tx.id,
+          parentId: tx.parentTransactionId || tx.id,
+          userId: tx.userId,
+          accountId: tx.accountId,
+          categoryId: tx.categoryId,
+          type: tx.type as "INCOME" | "EXPENSE",
+          description: tx.description,
+          amount: tx.amount,
+          dueDate: new Date(tx.overrideForDate || tx.dueDate),
+          paidDate: tx.paidDate ? new Date(tx.paidDate) : null,
+          status: "PAID" as const,
+          notes: tx.notes,
+          isFixed: false,
+          installments: null,
+          currentInstallment: null,
+          isVirtual: false,
+          isOverride: true,
+          account: tx.account,
+          category: tx.category,
+          tags: tx.tags,
+        })),
+      ];
+
+      // Evitar duplicatas
+      const existingIds = new Set(results.map((r) => r.id));
+      const newPaid = additionalPaid.filter((tx) => !existingIds.has(tx.id));
+      results = [...results, ...newPaid];
+
+      // Aplicar filtro de status novamente se necessário
+      if (status) {
+        results = results.filter((tx) => tx.status === status);
+      }
     }
 
     // Se includeOverdue está ativo e há filtro de data, buscar transações atrasadas de meses anteriores
