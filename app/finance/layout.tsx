@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Home,
   LayoutDashboard,
+  PieChart,
   Receipt,
   Tag,
   Wallet,
@@ -15,6 +16,7 @@ import type React from "react";
 const navigation = [
   { name: "Dashboard", href: "/finance", icon: LayoutDashboard },
   { name: "Lançamentos", href: "/finance/transactions", icon: Receipt },
+  { name: "Distribuição", href: "/finance/distribution", icon: PieChart },
   { name: "Investimentos", href: "/finance/investments", icon: Briefcase },
   { name: "Contas", href: "/finance/accounts", icon: Building2 },
   { name: "Categorias", href: "/finance/categories", icon: FolderOpen },

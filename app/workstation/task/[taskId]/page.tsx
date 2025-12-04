@@ -79,6 +79,8 @@ export default function TaskExpandedViewPage() {
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pomodoroBlockedDialogOpen, setPomodoroBlockedDialogOpen] =
+    useState(false);
   const [pomodoroState, setPomodoroState] = useState<{
     isRunning: boolean;
     linkedTaskId: string | null;
@@ -159,6 +161,13 @@ export default function TaskExpandedViewPage() {
   const handleDeleteTask = async () => {
     if (!task) return;
 
+    // Check if pomodoro is running for this task
+    if (isPomodoroRunningForThisTask) {
+      setPomodoroBlockedDialogOpen(true);
+      setDeleteDialogOpen(false);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/workstation/tasks/${task.id}`, {
         method: "DELETE",
@@ -171,6 +180,14 @@ export default function TaskExpandedViewPage() {
     } catch (error) {
       console.error("Error deleting task:", error);
       toast.error("Erro ao excluir tarefa");
+    }
+  };
+
+  const tryDeleteTask = () => {
+    if (isPomodoroRunningForThisTask) {
+      setPomodoroBlockedDialogOpen(true);
+    } else {
+      setDeleteDialogOpen(true);
     }
   };
 
@@ -309,7 +326,7 @@ export default function TaskExpandedViewPage() {
               variant="outline"
               size="sm"
               className="text-destructive hover:text-destructive"
-              onClick={() => setDeleteDialogOpen(true)}
+              onClick={tryDeleteTask}
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Excluir
@@ -517,6 +534,33 @@ export default function TaskExpandedViewPage() {
             >
               Excluir
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Pomodoro Running Block Dialog */}
+      <AlertDialog
+        open={pomodoroBlockedDialogOpen}
+        onOpenChange={setPomodoroBlockedDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pomodoro em andamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta tarefa possui um Pomodoro em andamento. Finalize o Pomodoro
+              antes de excluir a tarefa.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setPomodoroBlockedDialogOpen(false);
+                handleStartPomodoro();
+              }}
+            >
+              Finalizar Pomodoro
+            </AlertDialogAction>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

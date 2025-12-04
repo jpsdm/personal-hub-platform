@@ -1,6 +1,10 @@
 import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/user-session";
-import { isVirtualId, parseVirtualId } from "@/modules/finance";
+import {
+  calculateTransactionStatus,
+  isVirtualId,
+  parseVirtualId,
+} from "@/modules/finance";
 import type { Params } from "next/dist/server/request/params";
 import { NextResponse } from "next/server";
 
@@ -337,6 +341,13 @@ export async function PUT(request: Request, context: { params: Params }) {
           ).includes(occKey);
 
           if (!existingOverride && !isCancelled) {
+            // Calcular o status correto baseado na data
+            const overrideDate = new Date(checkDate);
+            const calculatedStatus = calculateTransactionStatus(
+              null,
+              overrideDate
+            );
+
             // Criar override com valores originais para preservar histórico
             const preserveOverride = await prisma.transaction.create({
               data: {
@@ -346,13 +357,13 @@ export async function PUT(request: Request, context: { params: Params }) {
                 type: rootTransaction.type,
                 description: rootTransaction.description,
                 amount: rootTransaction.amount,
-                dueDate: new Date(checkDate),
-                status: "PENDING", // Manter como pendente ou verificar se passou
+                dueDate: overrideDate,
+                status: calculatedStatus,
                 paidDate: null,
                 notes: rootTransaction.notes,
                 isFixed: false,
                 isOverride: true,
-                overrideForDate: new Date(checkDate),
+                overrideForDate: overrideDate,
                 parentTransactionId: parentId,
                 cancelledOccurrences: [],
               },

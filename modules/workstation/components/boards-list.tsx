@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { KanbanBoard } from "@/modules/workstation/types";
 import { Folder, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 interface BoardsListProps {
@@ -46,7 +47,6 @@ interface BoardsListProps {
     data: { name?: string; description?: string; color?: string }
   ) => Promise<void>;
   onDeleteBoard: (boardId: string) => Promise<void>;
-  onSelectBoard: (board: KanbanBoard) => void;
 }
 
 const BOARD_COLORS = [
@@ -66,7 +66,6 @@ export function BoardsList({
   onCreateBoard,
   onUpdateBoard,
   onDeleteBoard,
-  onSelectBoard,
 }: BoardsListProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editBoard, setEditBoard] = useState<KanbanBoard | null>(null);
@@ -227,69 +226,71 @@ export function BoardsList({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {boards.map((board) => (
-            <Card
+            <Link
               key={board.id}
-              className="group cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => onSelectBoard(board)}
+              href={`/workstation/${board.id}`}
+              className="block"
             >
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: board.color + "20" }}
-                  >
-                    <Folder
-                      className="w-5 h-5"
-                      style={{ color: board.color }}
-                    />
+              <Card className="group cursor-pointer hover:shadow-md transition-shadow h-full">
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: board.color + "20" }}
+                    >
+                      <Folder
+                        className="w-5 h-5"
+                        style={{ color: board.color }}
+                      />
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(board);
+                          }}
+                        >
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteBoard(board);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditDialog(board);
-                        }}
-                      >
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteBoard(board);
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <h3 className="font-medium truncate">{board.name}</h3>
+                  {board.description && (
+                    <p className="text-sm text-muted-foreground truncate mt-1">
+                      {board.description}
+                    </p>
+                  )}
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    {(board as KanbanBoard & { _count?: { tasks: number } })
+                      ._count?.tasks || 0}{" "}
+                    tarefas
+                  </div>
                 </div>
-                <h3 className="font-medium truncate">{board.name}</h3>
-                {board.description && (
-                  <p className="text-sm text-muted-foreground truncate mt-1">
-                    {board.description}
-                  </p>
-                )}
-                <div className="mt-3 text-xs text-muted-foreground">
-                  {(board as KanbanBoard & { _count?: { tasks: number } })
-                    ._count?.tasks || 0}{" "}
-                  tarefas
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </Link>
           ))}
         </div>
       )}
