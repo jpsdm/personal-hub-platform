@@ -79,7 +79,6 @@ export interface Transaction {
   parentTransactionId?: string | null;
   cancelledOccurrences: string[];
   currentInstallment?: number | null;
-  recurringRuleId?: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }

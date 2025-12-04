@@ -24,7 +24,6 @@ model User {
   categories      Category[]
   tags            Tag[]
   transactions    Transaction[]
-  recurringRules  RecurringRule[]
   
   // Workstation relations
   kanbanBoards     KanbanBoard[]
@@ -112,14 +111,12 @@ model Transaction {
   
   // Legado (manter para compatibilidade durante migração)
   currentInstallment Int?   // Será removido após migração
-  recurringRuleId String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   account       Account               @relation(fields: [accountId], references: [id], onDelete: Cascade)
   category      Category              @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  recurringRule RecurringRule?        @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
   tags          TransactionOnTags[]
 
   @@index([userId])
@@ -144,23 +141,6 @@ model TransactionOnTags {
   @@id([transactionId, tagId])
   @@index([transactionId])
   @@index([tagId])
-}
-
-model RecurringRule {
-  id         String    @id @default(uuid())
-  userId     String
-  type       String    // DAILY, WEEKLY, MONTHLY, YEARLY, FIXED
-  startDate  DateTime
-  endDate    DateTime?
-  dayOfMonth Int?
-  dayOfWeek  Int?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-
-  @@index([userId])
 }
 
 // ==========================================
