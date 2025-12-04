@@ -3,6 +3,7 @@ export { AccountDialog } from "./components/account-dialog";
 export { AccountsList } from "./components/accounts-list";
 export { AiChat } from "./components/ai-chat";
 export { CategoriesList } from "./components/categories-list";
+export { DistributionSummary } from "./components/distribution-summary";
 export { CategoryDialog } from "./components/category-dialog";
 export { DashboardCharts } from "./components/dashboard-charts";
 export { InvestmentDialog } from "./components/investment-dialog";
