@@ -443,6 +443,7 @@ export function KanbanBoardView({
         onOpenChange={setTaskDialogOpen}
         task={selectedTask}
         columns={columns}
+        columnId={selectedColumnId || undefined}
         boardId={board.id}
         onSave={handleSaveTask}
         onDelete={selectedTask ? handleDeleteTask : undefined}
