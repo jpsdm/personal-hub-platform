@@ -134,6 +134,8 @@ export default function WorkstationPage() {
     try {
       const task = await createTask(data as any);
       toast.success("Tarefa criada!");
+      // Notify layout to refresh tasks list
+      window.dispatchEvent(new CustomEvent("refreshTasks"));
       return task;
     } catch (error) {
       toast.error("Erro ao criar tarefa");

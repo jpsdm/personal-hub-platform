@@ -26,7 +26,7 @@ import type {
   UpdateTaskInput,
 } from "@/modules/workstation/types";
 import { ArrowLeft, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ColumnDialog } from "./column-dialog";
 import { TaskCard } from "./task-card";
 import { TaskDialog } from "./task-dialog";
@@ -88,12 +88,41 @@ export function KanbanBoardView({
   const [deleteColumnDialog, setDeleteColumnDialog] =
     useState<KanbanColumn | null>(null);
   const [deleteTaskDialog, setDeleteTaskDialog] = useState<Task | null>(null);
+  const [pomodoroBlockedDialog, setPomodoroBlockedDialog] =
+    useState<Task | null>(null);
+  const [pomodoroState, setPomodoroState] = useState<{
+    isRunning: boolean;
+    linkedTaskId: string | null;
+  }>({ isRunning: false, linkedTaskId: null });
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [dropTarget, setDropTarget] = useState<{
     columnId: string;
     order: number;
   } | null>(null);
   const dragTaskRef = useRef<HTMLDivElement | null>(null);
+
+  // Listen for pomodoro state changes
+  useEffect(() => {
+    const handlePomodoroStateChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        isRunning: boolean;
+        linkedTaskId: string | null;
+      }>;
+      setPomodoroState(customEvent.detail);
+    };
+
+    window.addEventListener("pomodoroStateChange", handlePomodoroStateChange);
+
+    // Request current state on mount
+    window.dispatchEvent(new CustomEvent("requestPomodoroState"));
+
+    return () => {
+      window.removeEventListener(
+        "pomodoroStateChange",
+        handlePomodoroStateChange
+      );
+    };
+  }, []);
 
   // Get tasks for a column, sorted by order
   const getColumnTasks = useCallback(
@@ -213,9 +242,27 @@ export function KanbanBoardView({
     }
   };
 
+  // Check if pomodoro is running for a task
+  const isPomodoroRunningForTask = (taskId: string) => {
+    return pomodoroState.isRunning && pomodoroState.linkedTaskId === taskId;
+  };
+
+  // Try to delete task, but check for running pomodoro first
+  const tryDeleteTask = (task: Task) => {
+    if (isPomodoroRunningForTask(task.id)) {
+      setPomodoroBlockedDialog(task);
+    } else {
+      setDeleteTaskDialog(task);
+    }
+  };
+
   // Handle delete task
   const handleDeleteTask = async () => {
     if (selectedTask) {
+      if (isPomodoroRunningForTask(selectedTask.id)) {
+        setPomodoroBlockedDialog(selectedTask);
+        return;
+      }
       await onDeleteTask(selectedTask.id);
       setTaskDialogOpen(false);
       setTaskPreviewOpen(false);
@@ -383,7 +430,7 @@ export function KanbanBoardView({
                         isDragging={dragState?.taskId === task.id}
                         onClick={() => openTaskPreview(task)}
                         onEdit={() => openEditTaskDialog(task)}
-                        onDelete={() => setDeleteTaskDialog(task)}
+                        onDelete={() => tryDeleteTask(task)}
                         onStartPomodoro={
                           onStartPomodoro
                             ? () => onStartPomodoro(task.id)
@@ -511,6 +558,36 @@ export function KanbanBoardView({
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Pomodoro Running Block Dialog */}
+      <AlertDialog
+        open={!!pomodoroBlockedDialog}
+        onOpenChange={(open) => !open && setPomodoroBlockedDialog(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pomodoro em andamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              A tarefa &quot;{pomodoroBlockedDialog?.title}&quot; possui um
+              Pomodoro em andamento. Finalize o Pomodoro antes de excluir a
+              tarefa.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setPomodoroBlockedDialog(null);
+                if (pomodoroBlockedDialog && onStartPomodoro) {
+                  onStartPomodoro(pomodoroBlockedDialog.id);
+                }
+              }}
+            >
+              Finalizar Pomodoro
+            </AlertDialogAction>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Task Preview Dialog */}
       <TaskPreviewDialog
         open={taskPreviewOpen}
@@ -525,7 +602,7 @@ export function KanbanBoardView({
         onDelete={() => {
           setTaskPreviewOpen(false);
           if (selectedTask) {
-            setDeleteTaskDialog(selectedTask);
+            tryDeleteTask(selectedTask);
           }
         }}
         onStartPomodoro={(taskId) => {

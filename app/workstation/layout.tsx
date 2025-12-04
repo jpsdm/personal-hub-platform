@@ -44,20 +44,50 @@ export default function WorkstationLayout({
   // Initialize pomodoro hook
   const pomodoro = usePomodoro(userId);
 
+  // Function to refetch tasks
+  const fetchTasks = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const response = await fetch(`/api/workstation/tasks?userId=${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data);
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    }
+  }, [userId]);
+
+  // Function to emit pomodoro state change
+  const emitPomodoroState = useCallback(
+    (isRunning: boolean, linkedTaskId: string | null) => {
+      window.dispatchEvent(
+        new CustomEvent("pomodoroStateChange", {
+          detail: { isRunning, linkedTaskId },
+        })
+      );
+    },
+    []
+  );
+
   // Function to actually start pomodoro for a task
   const startPomodoroForTask = useCallback(
     async (taskId: string) => {
+      // Refetch tasks to get latest data (in case new task was created)
+      await fetchTasks();
       const task = tasks.find((t) => t.id === taskId);
       if (task) {
         pomodoro.linkTask(task);
       }
       try {
         await pomodoro.startSession(taskId);
+        // Emit state change immediately after starting
+        emitPomodoroState(true, taskId);
       } catch (error) {
         console.error("Error starting pomodoro:", error);
       }
     },
-    [tasks, pomodoro]
+    [tasks, pomodoro, fetchTasks, emitPomodoroState]
   );
 
   // Handle switching from one task to another
@@ -65,11 +95,24 @@ export default function WorkstationLayout({
     if (switchTaskDialog.newTaskId) {
       // Stop current session
       await pomodoro.stopSession();
+      emitPomodoroState(false, null);
       // Start new session
       await startPomodoroForTask(switchTaskDialog.newTaskId);
     }
     setSwitchTaskDialog({ open: false, newTaskId: null, newTaskTitle: "" });
   };
+
+  // Listen for task list refresh requests
+  useEffect(() => {
+    const handleRefreshTasks = () => {
+      fetchTasks();
+    };
+
+    window.addEventListener("refreshTasks", handleRefreshTasks);
+    return () => {
+      window.removeEventListener("refreshTasks", handleRefreshTasks);
+    };
+  }, [fetchTasks]);
 
   // Listen for start pomodoro events from child components
   useEffect(() => {
@@ -80,12 +123,18 @@ export default function WorkstationLayout({
       // If pomodoro is running and it's the same task, stop it
       if (pomodoro.isRunning && pomodoro.linkedTask?.id === taskId) {
         await pomodoro.stopSession();
+        emitPomodoroState(false, null);
         return;
       }
 
       // If pomodoro is running for a different task, show confirmation dialog
       if (pomodoro.isRunning && pomodoro.linkedTask?.id !== taskId) {
-        const newTask = tasks.find((t) => t.id === taskId);
+        // Refetch to get latest task data
+        await fetchTasks();
+        const updatedTasks = await fetch(
+          `/api/workstation/tasks?userId=${userId}`
+        ).then((r) => r.json());
+        const newTask = updatedTasks.find((t: Task) => t.id === taskId);
         setSwitchTaskDialog({
           open: true,
           newTaskId: taskId,
@@ -102,7 +151,14 @@ export default function WorkstationLayout({
     return () => {
       window.removeEventListener("startPomodoro", handleStartPomodoro);
     };
-  }, [tasks, pomodoro, startPomodoroForTask]);
+  }, [
+    tasks,
+    pomodoro,
+    startPomodoroForTask,
+    emitPomodoroState,
+    fetchTasks,
+    userId,
+  ]);
 
   // Expose pomodoro state to children via custom event
   useEffect(() => {
@@ -155,24 +211,14 @@ export default function WorkstationLayout({
     }
     setUserId(storedUserId);
     setIsLoading(false);
-
-    // Fetch all tasks for pomodoro linking
-    const fetchTasks = async () => {
-      try {
-        const response = await fetch(
-          `/api/workstation/tasks?userId=${storedUserId}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setTasks(data);
-        }
-      } catch (error) {
-        console.error("Error fetching tasks:", error);
-      }
-    };
-
-    fetchTasks();
   }, [router]);
+
+  // Fetch tasks when userId is set
+  useEffect(() => {
+    if (userId) {
+      fetchTasks();
+    }
+  }, [userId, fetchTasks]);
 
   if (isLoading) {
     return (
