@@ -5,7 +5,9 @@ import type { VirtualOccurrence } from "../types";
 
 type SelectionMap = Record<string, VirtualOccurrence>;
 
-export function useReceiptGenerator(initialSelection: VirtualOccurrence[] = []) {
+export function useReceiptGenerator(
+  initialSelection: VirtualOccurrence[] = []
+) {
   const [selection, setSelection] = useState<SelectionMap>(() => {
     return initialSelection.reduce<SelectionMap>((acc, tx) => {
       if (tx.type === "EXPENSE") {

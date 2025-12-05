@@ -106,7 +106,10 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function TransactionsList({ filters = {}, receiptSelection }: TransactionsListProps) {
+export function TransactionsList({
+  filters = {},
+  receiptSelection,
+}: TransactionsListProps) {
   const [transactions, setTransactions] = useState<VirtualOccurrence[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
