@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -48,6 +49,14 @@ import { TransactionDialog } from "./transaction-dialog";
 type ActionScope = "single" | "future" | "all";
 type ActionType = "edit" | "delete";
 
+interface ReceiptSelectionControls {
+  selectedTransactions: VirtualOccurrence[];
+  toggleTransaction: (transaction: VirtualOccurrence) => void;
+  clearSelection: () => void;
+  isSelected: (id: string) => boolean;
+  syncSelection: (transactions: VirtualOccurrence[]) => void;
+}
+
 interface TransactionsListProps {
   filters?: {
     startDate?: string;
@@ -62,6 +71,7 @@ interface TransactionsListProps {
     includeOverdue?: boolean;
     cashFlowMode?: boolean;
   };
+  receiptSelection?: ReceiptSelectionControls;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -96,7 +106,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function TransactionsList({ filters = {} }: TransactionsListProps) {
+export function TransactionsList({ filters = {}, receiptSelection }: TransactionsListProps) {
   const [transactions, setTransactions] = useState<VirtualOccurrence[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -112,7 +122,6 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
   const [scopeAction, setScopeAction] = useState<ActionType>("delete");
   const [scopeTransaction, setScopeTransaction] =
     useState<VirtualOccurrence | null>(null);
-
   // Calcular totais baseado no tipo de filtro
   const totals = useMemo(() => {
     // Receitas
@@ -184,6 +193,7 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
       if (response.ok) {
         const data = await response.json();
         setTransactions(data);
+        receiptSelection?.syncSelection(data);
       }
     } catch (error) {
       console.error("Error fetching transactions:", error);
@@ -730,6 +740,7 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
                     <TableHead>Vencimento</TableHead>
                     <TableHead>Pagamento</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-center">Recibo</TableHead>
                     <TableHead>Tags</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -818,6 +829,26 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
                       <TableCell>
                         <StatusBadge status={transaction.status} />
                       </TableCell>
+                      <TableCell className="text-center">
+                        {receiptSelection &&
+                        transaction.type === "EXPENSE" &&
+                        transaction.status === "PAID" ? (
+                          <Checkbox
+                            checked={receiptSelection.isSelected(
+                              transaction.id
+                            )}
+                            onCheckedChange={() =>
+                              receiptSelection.toggleTransaction(transaction)
+                            }
+                            aria-label="Selecionar para recibo"
+                            className="mx-auto"
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            -
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {transaction.tags.map((t, idx) => (
@@ -879,7 +910,6 @@ export function TransactionsList({ filters = {} }: TransactionsListProps) {
           </Card>
         </div>
       </div>
-
       <TransactionDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}

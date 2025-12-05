@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  ReceiptGenerator,
   TransactionFilters as Filters,
   TransactionDialog,
   TransactionsList,
+  useReceiptGenerator,
 } from "@/modules/finance";
-import { Plus } from "lucide-react";
+import { Plus, ReceiptText } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 export interface TransactionFilters {
   startDate?: string;
@@ -41,6 +43,14 @@ function TransactionsPageContent() {
   const [selectedMonth, setSelectedMonth] = useState(
     `${currentYear}-${String(currentMonth).padStart(2, "0")}`
   );
+  const {
+    selectedTransactions: receiptTransactions,
+    toggleTransaction: toggleReceiptTransaction,
+    clearSelection: clearReceiptSelection,
+    isSelected: isReceiptSelected,
+    syncSelection: syncReceiptSelection,
+  } = useReceiptGenerator();
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
 
   // Verificar parâmetros da URL para abrir dialog automaticamente
   useEffect(() => {
@@ -56,6 +66,12 @@ function TransactionsPageContent() {
       router.replace("/finance/transactions", { scroll: false });
     }
   }, [searchParams, router]);
+
+  useEffect(() => {
+    if (receiptTransactions.length === 0) {
+      setReceiptDialogOpen(false);
+    }
+  }, [receiptTransactions.length]);
 
   const handleSuccess = () => {
     setRefreshKey((prev) => prev + 1);
@@ -77,27 +93,23 @@ function TransactionsPageContent() {
   };
 
   // Verificar se há filtros ativos (exceto datas)
-  const hasNonDateFilters = !!(
-    filters.type ||
-    filters.status ||
-    filters.categoryId ||
-    filters.accountId ||
-    filters.tagId
-  );
+  const effectiveFilters = useMemo(() => {
+    const base: TransactionFilters = { ...filters };
+    const hasNonDateFilters = !!(
+      base.type ||
+      base.status ||
+      base.categoryId ||
+      base.accountId ||
+      base.tagId
+    );
 
-  // Se há filtros não-data ativos e não há data explícita, não enviar mês/ano
-  // Isso permite buscar todas as transações que correspondem ao filtro
-  const effectiveFilters: TransactionFilters = {
-    ...filters,
-  };
+    if (!hasNonDateFilters && !base.startDate && !base.endDate) {
+      base.month = selectedMonth.split("-")[1];
+      base.year = selectedMonth.split("-")[0];
+    }
 
-  // Só adicionar mês/ano se:
-  // 1. Não há filtros não-data ativos, OU
-  // 2. Há data explícita definida (startDate/endDate)
-  if (!hasNonDateFilters && !filters.startDate && !filters.endDate) {
-    effectiveFilters.month = selectedMonth.split("-")[1];
-    effectiveFilters.year = selectedMonth.split("-")[0];
-  }
+    return base;
+  }, [filters, selectedMonth]);
 
   return (
     <div className="space-y-6">
@@ -111,7 +123,7 @@ function TransactionsPageContent() {
             Gerencie suas receitas e despesas
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-end">
           <div>
             <Label
               htmlFor="month-selector"
@@ -127,10 +139,21 @@ function TransactionsPageContent() {
               className="w-[200px]"
             />
           </div>
-          <Button className="gap-2 mt-5" onClick={() => handleOpenDialog()}>
-            <Plus className="w-4 h-4" />
-            Novo Lançamento
-          </Button>
+          <div className="flex items-center gap-2 sm:pb-0">
+            <Button className="gap-2" onClick={() => handleOpenDialog()}>
+              <Plus className="w-4 h-4" />
+              Novo Lançamento
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2"
+              disabled={receiptTransactions.length === 0}
+              onClick={() => setReceiptDialogOpen(true)}
+            >
+              <ReceiptText className="w-4 h-4" />
+              Emitir recibo
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -138,13 +161,30 @@ function TransactionsPageContent() {
       <Filters onFiltersChange={handleFiltersChange} />
 
       {/* Transactions List */}
-      <TransactionsList key={refreshKey} filters={effectiveFilters} />
+      <TransactionsList
+        key={refreshKey}
+        filters={effectiveFilters}
+        receiptSelection={{
+          selectedTransactions: receiptTransactions,
+          toggleTransaction: toggleReceiptTransaction,
+          clearSelection: clearReceiptSelection,
+          isSelected: isReceiptSelected,
+          syncSelection: syncReceiptSelection,
+        }}
+      />
 
       <TransactionDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         defaultType={defaultType}
         onSuccess={handleSuccess}
+      />
+
+      <ReceiptGenerator
+        open={receiptDialogOpen}
+        onOpenChange={setReceiptDialogOpen}
+        selectedTransactions={receiptTransactions}
+        onClearSelection={clearReceiptSelection}
       />
     </div>
   );

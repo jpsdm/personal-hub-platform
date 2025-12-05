@@ -12,6 +12,7 @@ export { InvestmentTransactionDialog } from "./components/investment-transaction
 export { PortfolioCharts } from "./components/portfolio-charts";
 export { PortfolioDialog } from "./components/portfolio-dialog";
 export { PortfolioList } from "./components/portfolio-list";
+export { ReceiptGenerator } from "./components/receipt-generator";
 export { SettingsDialog } from "./components/settings-dialog";
 export { TagDialog } from "./components/tag-dialog";
 export { TagsList } from "./components/tags-list";
@@ -91,6 +92,9 @@ export {
   isVirtualId,
   parseVirtualId,
 } from "./lib/virtual-transactions";
+
+// Hooks
+export { useReceiptGenerator } from "./hooks/use-receipt-generator";
 
 // Market API
 export {
