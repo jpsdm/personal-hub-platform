@@ -833,9 +833,7 @@ export function TransactionsList({
                         <StatusBadge status={transaction.status} />
                       </TableCell>
                       <TableCell className="text-center">
-                        {receiptSelection &&
-                        transaction.type === "EXPENSE" &&
-                        transaction.status === "PAID" ? (
+                        {receiptSelection && transaction.type === "EXPENSE" ? (
                           <Checkbox
                             checked={receiptSelection.isSelected(
                               transaction.id
